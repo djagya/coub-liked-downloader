@@ -5,7 +5,7 @@
     <databaseInfo>
         <version>134481920</version>
         <UUID>E5F9EE29-DA62-44EE-8EE5-C45E60CF689A</UUID>
-        <nextObjectID>110</nextObjectID>
+        <nextObjectID>112</nextObjectID>
         <metadata>
             <plist version="1.0">
                 <dict>
@@ -85,6 +85,7 @@
         <attribute name="name" type="string">Default Jar</attribute>
     </object>
     <object type="LMREQUEST" id="z106">
+        <attribute name="body" type="string">[{"data":{"json":"{\\"api_token\\":\\"08e3ebc28fadea6a47266ea117f2b027d49a99b08b2e625dd734f78d5d882375\\"}"},"identifier":"com.luckymarmot.JSONDynamicValue"}]</attribute>
         <attribute name="uuid" type="string">CE0C1DD0-8EB9-475D-98F8-3772AABC8298</attribute>
         <attribute name="url" type="string">http://coub.com/api/v2/likes/by_channel?channel_id=</attribute>
         <attribute name="storecookies" type="bool">1</attribute>
@@ -136,10 +137,36 @@
         <attribute name="method" type="string">GET</attribute>
         <attribute name="followredirects" type="bool">0</attribute>
         <attribute name="body" type="string">[{"data":{"json":"{\\"redirect_uri\\":\\"http:\\\\\\/\\\\\\/localhost:3000\\\\\\/coub\\",\\"client_id\\":\\"2d83ce8b012e7a3c63cb27e9afb81493adf33d0a8be2aea7555316443239a354\\"\\/*,\\"response_type\\":\\"code\\"*\\/,\\"code\\":\\"9e1ff2b8802dada1f3358c4499c1d15f8553f731267b823271a67e0b46fe6d59\\",\\"client_secret\\":\\"2d83ce8b012e7a3c63cb27e9afb81493adf33d0a8be2aea7555316443239a354\\",\\"grant_type\\":\\"authorization_code\\"}"},"identifier":"com.luckymarmot.JSONDynamicValue"}]</attribute>
-        <attribute name="order" type="int64">1</attribute>
+        <attribute name="order" type="int64">2</attribute>
         <attribute name="name" type="string">oAuth2</attribute>
         <relationship name="parent" type="0/1" destination="LMREQUESTTREEITEM"></relationship>
         <relationship name="children" type="0/0" destination="LMREQUESTTREEITEM"></relationship>
         <relationship name="headers" type="0/0" destination="LMKEYVALUE" idrefs="z109"></relationship>
+    </object>
+    <object type="LMREQUEST" id="z111">
+        <attribute name="uuid" type="string">2E6B2777-5A1D-46C2-AAF0-31D518E88208</attribute>
+        <attribute name="url" type="string">http://coub.com/api/v2/search_logs</attribute>
+        <attribute name="storecookies" type="bool">1</attribute>
+        <attribute name="sendcookies" type="bool">1</attribute>
+        <attribute name="redirectmethod" type="bool">0</attribute>
+        <attribute name="redirectauthorization" type="bool">0</attribute>
+        <attribute name="method" type="string">GET</attribute>
+        <attribute name="followredirects" type="bool">0</attribute>
+        <attribute name="body" type="string">[{"data":{"json":"{\\"api_token\\":\\"64ec9b354d5a678189912c71f48d6edef724db5fe466473f19d79e8c8d422bb6e07a2b38ea0c89d8fe84eeeb6c74d3fdc20aadcb0da5267cb78042499fa79efd\\"}"},"identifier":"com.luckymarmot.JSONDynamicValue"}]</attribute>
+        <attribute name="order" type="int64">1</attribute>
+        <attribute name="name" type="string">My API Duplicate</attribute>
+        <relationship name="parent" type="0/1" destination="LMREQUESTTREEITEM"></relationship>
+        <relationship name="children" type="0/0" destination="LMREQUESTTREEITEM"></relationship>
+        <relationship name="headers" type="0/0" destination="LMKEYVALUE" idrefs="z112"></relationship>
+    </object>
+    <object type="LMKEYVALUE" id="z112">
+        <attribute name="value" type="string"></attribute>
+        <attribute name="order" type="int64">0</attribute>
+        <attribute name="name" type="string"></attribute>
+        <attribute name="enabled" type="bool">1</attribute>
+        <relationship name="groupforbodyparameters" type="0/1" destination="LMREQUESTGROUP"></relationship>
+        <relationship name="groupforheaders" type="0/1" destination="LMREQUESTGROUP"></relationship>
+        <relationship name="groupforurlparameters" type="0/1" destination="LMREQUESTGROUP"></relationship>
+        <relationship name="request" type="0/1" destination="LMREQUEST" idrefs="z111"></relationship>
     </object>
 </database>
