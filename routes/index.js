@@ -7,16 +7,19 @@ router.get('/', function (req, res, next) {
     res.render('index', {title: 'Express'});
 });
 
-router.get('/auth', passport.authenticate('provider', {scope: ['like', 'logged_in']}), function (req, res) {
-    res.json(res.user);
+router.get('/success', function (req, res, next) {
+    res.json({
+        message: 'success',
+        session: JSON.stringify(req.session),
+        user: JSON.stringify(req.user || {})
+    });
 });
 
+router.get('/auth', passport.authenticate('provider', {scope: ['like', 'logged_in']}));
+
 router.get('/coub', passport.authenticate('provider', {
-        //successRedirect: '/',
-        //failureRedirect: '/'
-    }), function (req, res) {
-        res.json(res.user);
-    }
-);
+    successRedirect: '/success',
+    failureRedirect: '/'
+}));
 
 module.exports = router;
