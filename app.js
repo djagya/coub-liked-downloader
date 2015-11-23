@@ -24,6 +24,7 @@ app.use(cookieParser('nfkaldksjaflmsfjbeuk1471829rhr9j0!J8r20r'));
 app.use(session({secret: 'nfkaldksjaflmsfjbeuk1471829rhr9j0!J8r20r', resave: false, saveUninitialized: false}));
 app.use(passport.initialize());
 app.use(passport.session());
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
