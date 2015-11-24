@@ -87,7 +87,7 @@
     <object type="LMREQUEST" id="z106">
         <attribute name="body" type="string">[{"data":{"json":"{\\"\\":\\"\\"}"},"identifier":"com.luckymarmot.JSONDynamicValue"}]</attribute>
         <attribute name="uuid" type="string">CE0C1DD0-8EB9-475D-98F8-3772AABC8298</attribute>
-        <attribute name="url" type="string">http://coub.com/api/v2/likes/by_channel?channel_id=620873\u2600access_token=0d545af94e1d4fb3d7975bfe6ba904893c6820e165b05a16b972a8cb32a828c2</attribute>
+        <attribute name="url" type="string">http://coub.com/api/v2/likes/by_channel?channel_id=620873\u2600access_token=0a704de396b6b670931c8b4233d3c5757703236a5b3cbe6d3dc2493d68d639ab</attribute>
         <attribute name="storecookies" type="bool">1</attribute>
         <attribute name="sendcookies" type="bool">1</attribute>
         <attribute name="redirectmethod" type="bool">0</attribute>

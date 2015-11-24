@@ -4,6 +4,7 @@ var passport = require('../lib/coub-strategy');
 var request = require('request').defaults({
     baseUrl: 'http://coub.com/api/v2/'
 });
+request.debug = true;
 
 router.get('/', function (req, res) {
     res.render('index');
