@@ -1,10 +1,11 @@
 var express = require('express');
 var router = express.Router();
 var passport = require('../lib/coub-strategy');
-var request = require('request').defaults({
+var request = require('request');
+require('request-debug')(request);
+request.defaults({
     baseUrl: 'http://coub.com/api/v2/'
 });
-require('request-debug')(request);
 
 router.get('/', function (req, res) {
     res.render('index');
@@ -21,7 +22,7 @@ router.route('/start')
         // todo start async work
         // todo get email, quality
 
-        request.get('/likes/by_channel', {
+        request.get('likes/by_channel', {
             qs: {
                 channel_id: req.user.channel_id,
                 access_token: req.user.access_token
