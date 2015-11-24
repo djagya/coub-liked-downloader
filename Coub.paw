@@ -128,7 +128,7 @@
     </object>
     <object type="LMREQUEST" id="z110">
         <attribute name="uuid" type="string">6CECD53E-B148-47DC-A4D6-FFE6B6416AFA</attribute>
-        <attribute name="url" type="string">http://coub.com/api/v2/user/me?access_token=0d545af94e1d4fb3d7975bfe6ba904893c6820e165b05a16b972a8cb32a828c2</attribute>
+        <attribute name="url" type="string">http://coub.com/api/v2/users/me?access_token=0d545af94e1d4fb3d7975bfe6ba904893c6820e165b05a16b972a8cb32a828c2</attribute>
         <attribute name="storecookies" type="bool">1</attribute>
         <attribute name="sendcookies" type="bool">1</attribute>
         <attribute name="redirectmethod" type="bool">0</attribute>

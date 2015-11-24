@@ -14,6 +14,8 @@ router.route('/start')
         if (!req.user.accessToken || !req.user.channel_id) {
             res.redirect('/');
         }
+
+        next();
     })
 
     // page to start a download
