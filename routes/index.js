@@ -16,7 +16,7 @@ router.route('/start')
     })
 
     // form with email and quality to start an async job
-    .post(function (req, res) {
+    .post(function (req, res, next) {
         // todo start async work
         // todo get email, quality
 
@@ -30,11 +30,13 @@ router.route('/start')
             if (error) {
                 console.log(error);
                 res.render('error', {error: error});
+                return;
             }
 
             if (response.statusCode != 200) {
                 console.log('Error: Status code ' + response.statusCode + ', body: ' + body);
                 res.render('error', {error: error});
+                return;
             }
 
             res.send(response);
