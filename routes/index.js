@@ -29,13 +29,13 @@ router.route('/start')
         }, function (error, response, body) {
             if (error) {
                 console.log(error);
-                res.render('error', {error: error});
+                res.render('error', {message: 'Error', error: error});
                 return;
             }
 
             if (response.statusCode != 200) {
                 console.log('Error: Status code ' + response.statusCode + ', body: ' + body);
-                res.render('error', {error: error});
+                res.render('error', {message: body, error: {}});
                 return;
             }
 
