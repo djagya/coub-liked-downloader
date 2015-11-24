@@ -61,18 +61,15 @@ router.route('/start')
 
                 _.each(jsonResult.coubs, function (coub) {
                     coubsData.push({
+                        id: coub.permalink,
                         title: coub.title,
                         video: coub.file_versions.web,
                         audio: coub.audio_versions
                     });
                 });
 
-                console.log('Got coubs: ', coubsData);
-
                 totalPages = jsonResult.total_pages;
                 page++;
-
-                console.log('Total pages', totalPages, ', page: ', page);
 
                 // call callback to iterate further
                 cb();
@@ -80,6 +77,7 @@ router.route('/start')
         }, function () {
             return page < totalPages;
         }, function (err) {
+            console.log('Finished', coubsData.length);
             res.render('info', {data: coubsData});
         });
     });
