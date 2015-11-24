@@ -22,7 +22,7 @@ router.route('/start')
         // todo start async work
         // todo get email, quality
 
-        request.get('likes/by_channel', {
+        request.get('/likes/by_channel', {
             qs: {
                 channel_id: req.user.channel_id,
                 access_token: req.user.access_token
