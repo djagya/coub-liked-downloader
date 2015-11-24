@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 var passport = require('../lib/coub-strategy');
 var _ = require('lodash');
+var async = require('async');
 var request = require('request').defaults({
     baseUrl: 'http://coub.com/api/v2/'
 });
@@ -29,14 +30,13 @@ router.route('/start')
         // todo start async work
         // todo get email, quality
 
-        // page
-        // total_pages
         var page = 1,
             totalPages = 1,
             coubsData = [];
         // data: title, file_versions[web], audio_versions
 
-        do {
+        // async loop to fetch details
+        async.doWhilst(function (cb) {
             request.get('/likes/by_channel', {
                 qs: {
                     channel_id: req.user.channel_id,
@@ -69,10 +69,15 @@ router.route('/start')
 
                 totalPages = jsonResult.total_pages;
                 page++;
-            });
-        } while (page < totalPages);
 
-        res.render('info', {data: coubsData});
+                // call callback to iterate further
+                cb();
+            });
+        }, function () {
+            return page < totalPages;
+        }, function (err) {
+            res.render('info', {data: coubsData});
+        });
     });
 
 // get prepared archive
