@@ -1,17 +1,21 @@
 var express = require('express');
 var router = express.Router();
 var passport = require('../lib/coub-strategy');
-var request = require('request');
-require('request-debug')(request);
-//request.defaults({
-//baseUrl: 'http://coub.com/api/v2/',
-//});
+var request = require('request').defaults({
+    baseUrl: 'http://coub.com/api/v2/'
+});
 
 router.get('/', function (req, res) {
     res.render('index');
 });
 
 router.route('/start')
+    .all(function (req, res, next) {
+        if (!req.user.accessToken || !req.user.channel_id) {
+            res.redirect('/');
+        }
+    })
+
     // page to start a download
     .get(function (req, res) {
         res.render('start');
@@ -23,10 +27,9 @@ router.route('/start')
         // todo get email, quality
 
         request.get('/likes/by_channel', {
-            baseUrl: 'http://coub.com/api/v2/',
             qs: {
                 channel_id: req.user.channel_id,
-                access_token: req.user.access_token
+                access_token: req.user.accessToken
             },
             timeout: 1500
         }, function (error, response, body) {
