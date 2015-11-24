@@ -20,13 +20,13 @@ router.route('/start')
         // todo start async work
         // todo get email, quality
 
-        request.get({
-            uri: '/likes/by_channel',
+        request.get('/likes/by_channel', {
             qs: {
                 channel_id: req.user.channel_id,
                 access_token: req.user.access_token
-            }
-        }, {timeout: 1500}, function (error, response, body) {
+            },
+            timeout: 1500
+        }, function (error, response, body) {
             if (error) {
                 console.log(error);
                 res.render('error', {error: error});
