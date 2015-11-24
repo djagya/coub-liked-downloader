@@ -3,9 +3,9 @@ var router = express.Router();
 var passport = require('../lib/coub-strategy');
 var request = require('request');
 require('request-debug')(request);
-request.defaults({
-    baseUrl: 'http://coub.com/api/v2/'
-});
+//request.defaults({
+//baseUrl: 'http://coub.com/api/v2/',
+//});
 
 router.get('/', function (req, res) {
     res.render('index');
@@ -23,6 +23,7 @@ router.route('/start')
         // todo get email, quality
 
         request.get('/likes/by_channel', {
+            baseUrl: 'http://coub.com/api/v2/',
             qs: {
                 channel_id: req.user.channel_id,
                 access_token: req.user.access_token
