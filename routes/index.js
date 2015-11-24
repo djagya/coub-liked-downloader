@@ -81,7 +81,7 @@ router.route('/start')
         //    res.render('info', {data: coubsData});
         //});
 
-        res.render('success');
+        res.render('finish');
     });
 
 // get prepared archive
