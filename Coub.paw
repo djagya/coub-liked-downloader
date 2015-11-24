@@ -85,9 +85,9 @@
         <attribute name="name" type="string">Default Jar</attribute>
     </object>
     <object type="LMREQUEST" id="z106">
-        <attribute name="body" type="string">[{"data":{"json":"{\\"api_token\\":\\"08e3ebc28fadea6a47266ea117f2b027d49a99b08b2e625dd734f78d5d882375\\"}"},"identifier":"com.luckymarmot.JSONDynamicValue"}]</attribute>
+        <attribute name="body" type="string">[{"data":{"json":"{\\"\\":\\"\\"}"},"identifier":"com.luckymarmot.JSONDynamicValue"}]</attribute>
         <attribute name="uuid" type="string">CE0C1DD0-8EB9-475D-98F8-3772AABC8298</attribute>
-        <attribute name="url" type="string">http://coub.com/api/v2/likes/by_channel?channel_id=</attribute>
+        <attribute name="url" type="string">http://coub.com/api/v2/likes/by_channel?channel_id=620873\u2600access_token=0d545af94e1d4fb3d7975bfe6ba904893c6820e165b05a16b972a8cb32a828c2</attribute>
         <attribute name="storecookies" type="bool">1</attribute>
         <attribute name="sendcookies" type="bool">1</attribute>
         <attribute name="redirectmethod" type="bool">0</attribute>
@@ -95,7 +95,7 @@
         <attribute name="method" type="string">GET</attribute>
         <attribute name="followredirects" type="bool">0</attribute>
         <attribute name="order" type="int64">0</attribute>
-        <attribute name="name" type="string">My API</attribute>
+        <attribute name="name" type="string">Likes by channel (my)</attribute>
         <relationship name="parent" type="0/1" destination="LMREQUESTTREEITEM"></relationship>
         <relationship name="children" type="0/0" destination="LMREQUESTTREEITEM"></relationship>
         <relationship name="headers" type="0/0" destination="LMKEYVALUE" idrefs="z108"></relationship>
@@ -129,14 +129,14 @@
     </object>
     <object type="LMREQUEST" id="z110">
         <attribute name="uuid" type="string">6CECD53E-B148-47DC-A4D6-FFE6B6416AFA</attribute>
-        <attribute name="url" type="string">http://coub.com/oauth/token</attribute>
+        <attribute name="url" type="string">http://coub.com/api/v2/users/me?access_token=0d545af94e1d4fb3d7975bfe6ba904893c6820e165b05a16b972a8cb32a828c2</attribute>
         <attribute name="storecookies" type="bool">1</attribute>
         <attribute name="sendcookies" type="bool">1</attribute>
         <attribute name="redirectmethod" type="bool">0</attribute>
         <attribute name="redirectauthorization" type="bool">0</attribute>
         <attribute name="method" type="string">GET</attribute>
         <attribute name="followredirects" type="bool">0</attribute>
-        <attribute name="body" type="string">[{"data":{"json":"{\\"redirect_uri\\":\\"http:\\\\\\/\\\\\\/localhost:3000\\\\\\/coub\\",\\"client_id\\":\\"2d83ce8b012e7a3c63cb27e9afb81493adf33d0a8be2aea7555316443239a354\\"\\/*,\\"response_type\\":\\"code\\"*\\/,\\"code\\":\\"9e1ff2b8802dada1f3358c4499c1d15f8553f731267b823271a67e0b46fe6d59\\",\\"client_secret\\":\\"2d83ce8b012e7a3c63cb27e9afb81493adf33d0a8be2aea7555316443239a354\\",\\"grant_type\\":\\"authorization_code\\"}"},"identifier":"com.luckymarmot.JSONDynamicValue"}]</attribute>
+        <attribute name="body" type="string">[{"data":{"json":"{}"},"identifier":"com.luckymarmot.JSONDynamicValue"}]</attribute>
         <attribute name="order" type="int64">2</attribute>
         <attribute name="name" type="string">oAuth2</attribute>
         <relationship name="parent" type="0/1" destination="LMREQUESTTREEITEM"></relationship>
@@ -145,16 +145,16 @@
     </object>
     <object type="LMREQUEST" id="z111">
         <attribute name="uuid" type="string">2E6B2777-5A1D-46C2-AAF0-31D518E88208</attribute>
-        <attribute name="url" type="string">http://coub.com/api/v2/search_logs</attribute>
+        <attribute name="url" type="string">http://coub.com/api/v2/coubs/8fvrb</attribute>
         <attribute name="storecookies" type="bool">1</attribute>
         <attribute name="sendcookies" type="bool">1</attribute>
         <attribute name="redirectmethod" type="bool">0</attribute>
         <attribute name="redirectauthorization" type="bool">0</attribute>
         <attribute name="method" type="string">GET</attribute>
         <attribute name="followredirects" type="bool">0</attribute>
-        <attribute name="body" type="string">[{"data":{"json":"{\\"api_token\\":\\"64ec9b354d5a678189912c71f48d6edef724db5fe466473f19d79e8c8d422bb6e07a2b38ea0c89d8fe84eeeb6c74d3fdc20aadcb0da5267cb78042499fa79efd\\"}"},"identifier":"com.luckymarmot.JSONDynamicValue"}]</attribute>
+        <attribute name="body" type="string">[{"data":{"json":"{\\"access_token\\":\\"0d545af94e1d4fb3d7975bfe6ba904893c6820e165b05a16b972a8cb32a828c2\\"}"},"identifier":"com.luckymarmot.JSONDynamicValue"}]</attribute>
         <attribute name="order" type="int64">1</attribute>
-        <attribute name="name" type="string">My API Duplicate</attribute>
+        <attribute name="name" type="string">Coub details</attribute>
         <relationship name="parent" type="0/1" destination="LMREQUESTTREEITEM"></relationship>
         <relationship name="children" type="0/0" destination="LMREQUESTTREEITEM"></relationship>
         <relationship name="headers" type="0/0" destination="LMKEYVALUE" idrefs="z112"></relationship>

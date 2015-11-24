@@ -1,0 +1,13 @@
+extends layout
+
+block content
+    h1 Start Download
+
+    form(name='start-download', method='post')
+        input(type='text', name='email', placeholder='Your Email')
+        select
+            option(value='high') High
+            option(value='med') Medium
+            option(value='small') Small
+
+        input(type='submit')
