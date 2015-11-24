@@ -6,6 +6,7 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var session = require('express-session');
 var passport = require('./lib/coub-strategy');
+var RedisStore = require('connect-redis')(session);
 
 var routes = require('./routes/index');
 
@@ -21,7 +22,14 @@ app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(cookieParser('nfkaldksjaflmsfjbeuk1471829rhr9j0!J8r20r'));
-app.use(session({secret: 'nfkaldksjaflmsfjbeuk1471829rhr9j0!J8r20r', resave: false, saveUninitialized: false}));
+app.use(session({
+    store: new RedisStore({
+        url: process.env.REDIS_URL
+    }),
+    secret: 'nfkaldksjaflmsfjbeuk1471829rhr9j0!J8r20r',
+    resave: false,
+    saveUninitialized: false
+}));
 app.use(passport.initialize());
 app.use(passport.session());
 
