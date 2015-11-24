@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var passport = require('../lib/coub-strategy');
+var _ = require('lodash');
 var request = require('request').defaults({
     baseUrl: 'http://coub.com/api/v2/'
 });
@@ -28,27 +29,50 @@ router.route('/start')
         // todo start async work
         // todo get email, quality
 
-        request.get('/likes/by_channel', {
-            qs: {
-                channel_id: req.user.channel_id,
-                access_token: req.user.accessToken
-            },
-            timeout: 1500
-        }, function (error, response, body) {
-            if (error) {
-                console.log(error);
-                res.render('error', {message: 'Error', error: error});
-                return;
-            }
+        // page
+        // total_pages
+        var page = 1,
+            totalPages = 1,
+            coubsData = [];
+        // data: title, file_versions[web], audio_versions
 
-            if (response.statusCode != 200) {
-                console.log('Error: Status code ' + response.statusCode + ', body: ' + body);
-                res.render('error', {message: body, error: {}});
-                return;
-            }
+        do {
+            request.get('/likes/by_channel', {
+                qs: {
+                    channel_id: req.user.channel_id,
+                    page: page,
+                    access_token: req.user.accessToken
+                },
+                timeout: 1500
+            }, function (error, response, body) {
+                if (error) {
+                    console.log(error);
+                    res.render('error', {message: 'Error', error: error});
+                    return;
+                }
 
-            res.send(response);
-        });
+                if (response.statusCode != 200) {
+                    console.log('Error: Status code ' + response.statusCode + ', body: ' + body);
+                    res.render('error', {message: body, error: {}});
+                    return;
+                }
+
+                var jsonResult = JSON.parse(body);
+
+                _.each(jsonResult.coubs, function (coub) {
+                    coubsData.push({
+                        title: coub.title,
+                        video: coub.file_versions.web,
+                        audio: coub.audio_versions
+                    });
+                });
+
+                totalPages = jsonResult.total_pages;
+                page++;
+            });
+        } while (page < totalPages);
+
+        res.render('info', {data: coubsData});
     });
 
 // get prepared archive
