@@ -77,6 +77,7 @@ router.route('/start')
         }, function () {
             return page < totalPages;
         }, function (err) {
+            console.log(err);
             res.render('info', {data: coubsData});
         });
     });
