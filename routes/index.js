@@ -32,10 +32,10 @@ router.route('/start')
 
         var page = 1,
             totalPages = 1,
+        // contains: title, file_versions[web], audio_versions
             coubsData = [];
-        // data: title, file_versions[web], audio_versions
 
-        // async loop to fetch details
+        // async loop to fetch liked coubs
         async.doWhilst(function (cb) {
             request.get('/likes/by_channel', {
                 qs: {
@@ -48,13 +48,13 @@ router.route('/start')
                 if (error) {
                     console.log(error);
                     res.render('error', {message: 'Error', error: error});
-                    return;
+                    cb('API error');
                 }
 
                 if (response.statusCode != 200) {
                     console.log('Error: Status code ' + response.statusCode + ', body: ' + body);
                     res.render('error', {message: body, error: {}});
-                    return;
+                    cb('API error');
                 }
 
                 var jsonResult = JSON.parse(body);
@@ -67,8 +67,12 @@ router.route('/start')
                     });
                 });
 
+                console.log('Got coubs: ', coubsData);
+
                 totalPages = jsonResult.total_pages;
                 page++;
+
+                console.log('Total pages', totalPages, ', page: ', page);
 
                 // call callback to iterate further
                 cb();
