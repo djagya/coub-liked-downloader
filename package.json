@@ -16,6 +16,7 @@
     "passport": "^0.3.2",
     "passport-oauth": "^1.0.0",
     "request": "^2.67.0",
+    "request-debug": "^0.2.0",
     "serve-favicon": "~2.3.0"
   },
   "engines": {
