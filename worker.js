@@ -99,7 +99,7 @@ queue.process('download_coubs', 5, function (job, done) {
         cb();
     }
 
-    function sendEmail(to) {
+    function sendEmail(to, cb) {
         job.log('Sending email to %s', to);
         console.log('Sending email to %s', to);
 
