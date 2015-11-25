@@ -12,6 +12,7 @@ var kue = require('kue'),
         redis: process.env.REDIS_URL
     });
 
+
 router.get('/', function (req, res) {
     res.render('index');
 });
