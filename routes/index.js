@@ -29,14 +29,15 @@ router.route('/start')
     .post(function (req, res) {
         if (!req.session.jobId && !req.params.force) {
             res.redirect('/success');
+            return;
         }
 
         var job = queue.create('download_coubs', {
                 title: 'Download liked for channel #' + req.user.channel_id,
                 channel_id: req.user.channel_id,
                 access_token: req.user.access_token,
-                email: req.params.email,
-                quality: req.params.quality
+                email: req.body.email,
+                quality: req.body.quality
             })
             .removeOnComplete(true)
             .save(function (err) {
@@ -53,14 +54,11 @@ router.route('/start')
             });
     });
 
-// get prepared archive
+// get prepared archive or show progress
 router.get('/download/:id', function (req, res) {
-    // use job.progress(frames, totalFrames); to show progress
-
-    // check files if there is an archive with that id
-    // req.params.id
-
-    res.send({file: 'download'});
+    kue.Job.get(req.params.id, function (err, job) {
+        res.send(job);
+    });
 });
 
 router.get('/success', function (req, res) {

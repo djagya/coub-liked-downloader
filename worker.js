@@ -73,7 +73,10 @@ queue.process('download_coubs', 5, function (job, done) {
         }, function () {
             return page < totalPages;
         }, function (err) {
-            console.log(err);
+            if (err) {
+                console.log(err);
+                throw new Error(err);
+            }
 
             cb(coubsData);
         });
