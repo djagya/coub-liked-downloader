@@ -28,7 +28,7 @@ router.route('/start')
     // form with email and quality to start an async job
     .post(function (req, res) {
         if (!req.session.jobId && !req.params.force) {
-            res.render('finish');
+            res.redirect('/success');
         }
 
         var job = queue.create('download_coubs', {
@@ -48,8 +48,8 @@ router.route('/start')
 
                 req.session.jobId = job.id;
 
-                console.log(job.id);
-                res.render('finish');
+                console.log('Job id:', job.id);
+                res.redirect('/success');
             });
     });
 
@@ -64,11 +64,7 @@ router.get('/download/:id', function (req, res) {
 });
 
 router.get('/success', function (req, res) {
-    res.json({
-        message: 'success',
-        session: JSON.stringify(req.session),
-        user: JSON.stringify(req.user || {})
-    });
+    res.render('finish');
 });
 
 // coub auth stuff

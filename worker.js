@@ -13,7 +13,7 @@ console.log('Worker started');
 // process queue
 queue.process('download_coubs', 5, function (job, done) {
     getCoubs(job.data.channel_id, job.data.access_token, function (data) {
-        processCoubs(job.data.quality, data, function () {
+        processCoubs(data, job.data.quality, function () {
             sendEmail(job.data.email, done);
         });
     });
