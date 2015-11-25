@@ -1,11 +1,11 @@
 var express = require('express');
 var router = express.Router();
 var passport = require('../lib/coub-strategy');
-var _ = require('lodash');
-var async = require('async');
-var request = require('request').defaults({
-    baseUrl: 'http://coub.com/api/v2/'
-});
+var kue = require('kue'),
+    queue = kue.createQueue({
+        redis: process.env.REDIS_URL,
+    });
+//queue.create( ... ).removeOnComplete( true ).save();
 
 router.get('/', function (req, res) {
     res.render('index');
@@ -26,66 +26,31 @@ router.route('/start')
     })
 
     // form with email and quality to start an async job
-    .post(function (req, res, next) {
-        // todo start async work
-        // todo get email, quality
+    .post(function (req, res) {
+        var job = queue.create('coub', {
+                title: 'Download liked for channel #' + req.user.channel_id,
+                channel_id: req.user.channel_id,
+                access_token: req.user.access_token,
+                email: req.params.email,
+                quality: req.params.quality
+            })
+            .removeOnComplete(true)
+            .save(function (err) {
+                if (err) {
+                    console.log(err);
+                    res.render('error', {message: 'Error', error: err});
+                    return;
+                }
 
-        var page = 1,
-            totalPages = 1,
-        // contains: title, file_versions[web], audio_versions
-            coubsData = [];
-
-        // async loop to fetch liked coubs
-        //async.doWhilst(function (cb) {
-        //    request.get('/likes/by_channel', {
-        //        qs: {
-        //            channel_id: req.user.channel_id,
-        //            page: page,
-        //            access_token: req.user.accessToken
-        //        },
-        //        timeout: 1500
-        //    }, function (error, response, body) {
-        //        if (error) {
-        //            console.log(error);
-        //            res.render('error', {message: 'Error', error: error});
-        //            cb('API error');
-        //        }
-        //
-        //        if (response.statusCode != 200) {
-        //            console.log('Error: Status code ' + response.statusCode + ', body: ' + body);
-        //            res.render('error', {message: body, error: {}});
-        //            cb('API error');
-        //        }
-        //
-        //        var jsonResult = JSON.parse(body);
-        //
-        //        _.each(jsonResult.coubs, function (coub) {
-        //            coubsData.push({
-        //                id: coub.permalink,
-        //                title: coub.title,
-        //                video: coub.file_versions.web,
-        //                audio: coub.audio_versions
-        //            });
-        //        });
-        //
-        //        totalPages = jsonResult.total_pages;
-        //        page++;
-        //
-        //        // call callback to iterate further
-        //        cb();
-        //    });
-        //}, function () {
-        //    return page < totalPages;
-        //}, function (err) {
-        //    console.log(err);
-        //    res.render('info', {data: coubsData});
-        //});
-
-        res.render('finish');
+                console.log(job.id);
+                res.render('finish');
+            });
     });
 
 // get prepared archive
 router.get('/download/:id', function (req, res) {
+    // use job.progress(frames, totalFrames); to show progress
+
     // check files if there is an archive with that id
     // req.params.id
 
