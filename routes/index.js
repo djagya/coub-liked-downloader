@@ -25,10 +25,10 @@ router.route('/start')
     })
 
     // form with email and quality to start an async job
-    .post(function (req, res) {
-        if (req.session.jobId) {
+    .post(function (req, res, next) {
+        if (req.session.jobId && !req.params.force) {
             res.render('finish');
-            return;
+            return next();
         }
 
         var job = queue.create('download_coubs', {
