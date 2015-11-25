@@ -3,9 +3,8 @@ var router = express.Router();
 var passport = require('../lib/coub-strategy');
 var kue = require('kue'),
     queue = kue.createQueue({
-        redis: process.env.REDIS_URL,
+        redis: process.env.REDIS_URL
     });
-//queue.create( ... ).removeOnComplete( true ).save();
 
 router.get('/', function (req, res) {
     res.render('index');
@@ -27,7 +26,12 @@ router.route('/start')
 
     // form with email and quality to start an async job
     .post(function (req, res) {
-        var job = queue.create('coub', {
+        if (req.session.jobId) {
+            res.render('finish');
+            return;
+        }
+
+        var job = queue.create('download_coubs', {
                 title: 'Download liked for channel #' + req.user.channel_id,
                 channel_id: req.user.channel_id,
                 access_token: req.user.access_token,
@@ -41,6 +45,8 @@ router.route('/start')
                     res.render('error', {message: 'Error', error: err});
                     return;
                 }
+
+                req.session.jobId = job.id;
 
                 console.log(job.id);
                 res.render('finish');
