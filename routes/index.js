@@ -39,7 +39,7 @@ router.route('/start')
                 email: req.body.email,
                 quality: req.body.quality
             })
-            .removeOnComplete(true)
+            //.removeOnComplete(true)
             .save(function (err) {
                 if (err) {
                     console.log(err);
