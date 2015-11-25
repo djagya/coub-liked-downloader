@@ -99,12 +99,16 @@ queue.process('download_coubs', 5, function (job, done) {
         job.log('Processing %d coubs with %s quality', data.length, quality);
         console.log('Processing %d coubs with %s quality', data.length, quality);
 
+        job.progress(40, 100);
+
         cb();
     }
 
     function sendEmail(to, cb) {
         job.log('Sending email to %s', to);
         console.log('Sending email to %s', to);
+
+        job.progress(90, 100);
 
         cb();
     }

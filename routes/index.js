@@ -57,7 +57,11 @@ router.route('/start')
 // get prepared archive or show progress
 router.get('/download/:id', function (req, res) {
     kue.Job.get(req.params.id, function (err, job) {
-        res.send(job);
+        if (err) {
+            res.send(error);
+        } else {
+            res.send(job);
+        }
     });
 });
 
