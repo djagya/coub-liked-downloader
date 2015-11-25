@@ -80,6 +80,19 @@ queue.process('download_coubs', 5, function (job, done) {
     }
 
     function processCoubs(data, quality, cb) {
+        // todo make a request
+        // go through coubs
+        // download to a folder
+        // each should have name
+
+
+        // todo: do not download files, use remote file urls for ffmpeg and ffprobe
+        // how to download:
+        // 1. get video
+        // 2. get audion
+        // 3. check audio (with ffprobe: ffprobe -i input.mp4 -show_entries format=duration -v quiet -of csv="p=0") and video duarations
+        // 4. if audio > video: ffmpeg -f concat -i list.txt -i input.mp3 -c copy output.mp4 , where list.txt is the repeated video names like "file 'input.mp4'" on each line n times, where n = audio_duration/video_duration
+
         job.log('Processing %d coubs with %s quality', data.length, quality);
         console.log('Processing %d coubs with %s quality', data.length, quality);
 

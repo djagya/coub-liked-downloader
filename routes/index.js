@@ -26,7 +26,7 @@ router.route('/start')
 
     // form with email and quality to start an async job
     .post(function (req, res) {
-        if (req.session.jobId && !req.params.force) {
+        if (!req.params.force) {
             res.render('finish');
 
         }
@@ -64,18 +64,6 @@ router.get('/download/:id', function (req, res) {
 });
 
 router.get('/success', function (req, res) {
-    // todo make a request
-    // go through coubs
-    // download to a folder
-    // each should have name
-
-
-    // todo: do not download files, use remote file urls for ffmpeg and ffprobe
-    // how to download:
-    // 1. get video
-    // 2. get audion
-    // 3. check audio (with ffprobe: ffprobe -i input.mp4 -show_entries format=duration -v quiet -of csv="p=0") and video duarations
-    // 4. if audio > video: ffmpeg -f concat -i list.txt -i input.mp3 -c copy output.mp4 , where list.txt is the repeated video names like "file 'input.mp4'" on each line n times, where n = audio_duration/video_duration
     res.json({
         message: 'success',
         session: JSON.stringify(req.session),
@@ -83,6 +71,7 @@ router.get('/success', function (req, res) {
     });
 });
 
+// coub auth stuff
 router.get('/auth', passport.authenticate('provider', {scope: ['like', 'logged_in']}));
 
 router.get('/callback', passport.authenticate('provider', {
