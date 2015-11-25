@@ -18,7 +18,8 @@ queue.process('download_coubs', 5, function (job, done) {
 
     getCoubs(job.data.channel_id, job.data.access_token, function (data) {
         processCoubs(data, function () {
-            sendEmail(job.data.email, process.env.URL + '/download/' + job.data.channel_id, done);
+            // todo get url dynamically
+            sendEmail(job.data.email, 'https://coub-downloader.herokuapp.com/download/' + job.data.channel_id, done);
         });
     });
 
@@ -126,7 +127,6 @@ queue.process('download_coubs', 5, function (job, done) {
             html: '<a href="' + link + '">Link</a>'
         };
 
-        // send mail with defined transport object
         transporter.sendMail(mailOptions, function (error, info) {
             if (error) {
                 console.log(error);
