@@ -14,6 +14,7 @@ router.route('/start')
     .all(function (req, res, next) {
         if (!req.user.accessToken || !req.user.channel_id) {
             res.redirect('/');
+            return;
         }
 
         next();
