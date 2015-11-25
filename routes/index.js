@@ -25,32 +25,32 @@ router.route('/start')
     })
 
     // form with email and quality to start an async job
-    .post(function (req, res, next) {
+    .post(function (req, res) {
         if (req.session.jobId && !req.params.force) {
             res.render('finish');
-            return next();
+
         }
 
-        var job = queue.create('download_coubs', {
-                title: 'Download liked for channel #' + req.user.channel_id,
-                channel_id: req.user.channel_id,
-                access_token: req.user.access_token,
-                email: req.params.email,
-                quality: req.params.quality
-            })
-            .removeOnComplete(true)
-            .save(function (err) {
-                if (err) {
-                    console.log(err);
-                    res.render('error', {message: 'Error', error: err});
-                    return;
-                }
-
-                req.session.jobId = job.id;
-
-                console.log(job.id);
-                res.render('finish');
-            });
+        //var job = queue.create('download_coubs', {
+        //        title: 'Download liked for channel #' + req.user.channel_id,
+        //        channel_id: req.user.channel_id,
+        //        access_token: req.user.access_token,
+        //        email: req.params.email,
+        //        quality: req.params.quality
+        //    })
+        //    .removeOnComplete(true)
+        //    .save(function (err) {
+        //        if (err) {
+        //            console.log(err);
+        //            res.render('error', {message: 'Error', error: err});
+        //            return;
+        //        }
+        //
+        //        req.session.jobId = job.id;
+        //
+        //        console.log(job.id);
+        //        res.render('finish');
+        //    });
     });
 
 // get prepared archive
