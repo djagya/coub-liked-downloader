@@ -130,8 +130,6 @@ router.get('/download/:id', function (req, res) {
             res.status(404).send('Not found');
         }
     });
-
-    // show 3 buttons with different qualities and sizes
 });
 
 router.get('/success', function (req, res) {
