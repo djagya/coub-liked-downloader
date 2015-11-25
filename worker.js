@@ -36,13 +36,11 @@ queue.process('download_coubs', 5, function (job, done) {
             }, function (error, response, body) {
                 if (error) {
                     console.log(error);
-                    res.render('error', {message: 'Error', error: error});
                     cb('API error');
                 }
 
                 if (response.statusCode != 200) {
                     console.log('Error: Status code ' + response.statusCode + ', body: ' + body);
-                    res.render('error', {message: body, error: {}});
                     cb('API error');
                 }
 
