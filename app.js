@@ -4,6 +4,7 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var expressValidator = require('express-validator');
 var session = require('express-session');
 var passport = require('./lib/coub-strategy');
 var RedisStore = require('connect-redis')(session);
@@ -21,6 +22,7 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
+app.use(expressValidator());
 app.use(cookieParser('nfkaldksjaflmsfjbeuk1471829rhr9j0!J8r20r'));
 app.use(session({
     store: new RedisStore({

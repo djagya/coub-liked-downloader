@@ -1,0 +1,9 @@
+extends layout
+
+block content
+    h1 Download
+
+    ul
+        each item in data
+            li
+                a(href=item.link) Download in #{item.label} quality (#{item.size})

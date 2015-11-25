@@ -12,8 +12,11 @@ console.log('Worker started');
 
 // process queue
 queue.process('download_coubs', 5, function (job, done) {
+    // todo check if there is already an archive and it's not older than 1 day
+    console.log('Processing job');
+
     getCoubs(job.data.channel_id, job.data.access_token, function (data) {
-        processCoubs(data, job.data.quality, function () {
+        processCoubs(data, function () {
             sendEmail(job.data.email, done);
         });
     });
@@ -82,9 +85,7 @@ queue.process('download_coubs', 5, function (job, done) {
         });
     }
 
-    function processCoubs(data, quality, cb) {
-        // todo make a request
-        // go through coubs
+    function processCoubs(data, cb) {
         // download to a folder
         // each should have name
 
@@ -96,8 +97,8 @@ queue.process('download_coubs', 5, function (job, done) {
         // 3. check audio (with ffprobe: ffprobe -i input.mp4 -show_entries format=duration -v quiet -of csv="p=0") and video duarations
         // 4. if audio > video: ffmpeg -f concat -i list.txt -i input.mp3 -c copy output.mp4 , where list.txt is the repeated video names like "file 'input.mp4'" on each line n times, where n = audio_duration/video_duration
 
-        job.log('Processing %d coubs with %s quality', data.length, quality);
-        console.log('Processing %d coubs with %s quality', data.length, quality);
+        job.log('Processing %d coubs', data.length);
+        console.log('Processing %d coubs', data.length);
 
         job.progress(40, 100);
 

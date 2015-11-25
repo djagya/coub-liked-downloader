@@ -3,11 +3,13 @@ extends layout
 block content
     h1 Start Download
 
+    if errors
+        p.errorMessage The following errors occurred:
+        ul
+            each error in errors
+                li= error.msg
+
     form(name='start-download', method='post')
-        input(type='text', name='email', placeholder='Your Email')
-        select(name='quality')
-            option(value='high') High
-            option(value='med') Medium
-            option(value='small') Small
+        input(type='email', name='email', placeholder='Your Email', required=true, value=(post && post.email) ? post.email : '')
 
         input(type='submit')
