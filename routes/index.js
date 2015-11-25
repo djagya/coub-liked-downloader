@@ -3,15 +3,14 @@ var router = express.Router();
 var passport = require('../lib/coub-strategy');
 var _ = require('lodash');
 var qualities = require('../helpers/qualityList');
-var redis = require('redis'),
-    client = redis.createClient({
-        url: process.env.REDIS_URL
-    });
+//var redis = require('redis'),
+//    client = redis.createClient({
+//        url: process.env.REDIS_URL
+//    });
 var kue = require('kue'),
     queue = kue.createQueue({
         redis: process.env.REDIS_URL
     });
-
 
 router.get('/', function (req, res) {
     res.render('index');
