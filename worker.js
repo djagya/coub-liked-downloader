@@ -4,6 +4,7 @@ var kue = require('kue'),
     });
 var _ = require('lodash');
 var async = require('async');
+var nodemailer = require('nodemailer');
 var request = require('request').defaults({
     baseUrl: 'http://coub.com/api/v2/'
 });
@@ -17,7 +18,7 @@ queue.process('download_coubs', 5, function (job, done) {
 
     getCoubs(job.data.channel_id, job.data.access_token, function (data) {
         processCoubs(data, function () {
-            sendEmail(job.data.email, done);
+            sendEmail(job.data.email, process.env.URL + '/download/' + job.data.channel_id, done);
         });
     });
 
@@ -105,12 +106,36 @@ queue.process('download_coubs', 5, function (job, done) {
         cb();
     }
 
-    function sendEmail(to, cb) {
+    function sendEmail(to, link, cb) {
         job.log('Sending email to %s', to);
         console.log('Sending email to %s', to);
-
         job.progress(90, 100);
 
-        cb();
+        var transporter = nodemailer.createTransport({
+            service: 'Gmail',
+            auth: {
+                user: 'danil.kabluk@gmail.com',
+                pass: '8K736MA8Y5N'
+            }
+        });
+
+        var mailOptions = {
+            from: 'Coub downloader',
+            to: to, // list of receivers
+            subject: 'Your archive is ready!',
+            html: '<a href="' + link + '">Link</a>'
+        };
+
+        // send mail with defined transport object
+        transporter.sendMail(mailOptions, function (error, info) {
+            if (error) {
+                console.log(error);
+                // todo fail the job
+            } else {
+                console.log('Message sent: ' + info.response);
+            }
+
+            cb();
+        });
     }
 });
