@@ -27,13 +27,14 @@ router.route('/start')
 
     // form with email and quality to start an async job
     .post(function (req, res) {
+        // todo remove this debug 'force' thing
         if (!req.session.jobId && !req.params.force) {
             res.redirect('/success');
             return;
         }
 
         var job = queue.create('download_coubs', {
-                title: 'Download liked for channel #' + req.user.channel_id,
+                title: 'Download liked coubs for channel #' + req.user.channel_id,
                 channel_id: req.user.channel_id,
                 access_token: req.user.access_token,
                 email: req.body.email,
