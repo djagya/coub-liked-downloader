@@ -1,3 +1,5 @@
+'use strict';
+
 var kue = require('kue'),
     queue = queue = kue.createQueue({
         redis: process.env.REDIS_URL
@@ -7,9 +9,7 @@ var async = require('async');
 var nodemailer = require('nodemailer');
 var fs = require('fs');
 var execSync = require('child_process').execSync;
-var request = require('request').defaults({
-    baseUrl: 'http://coub.com/api/v2/'
-});
+var request = require('request');
 
 const POPULAR_COUB_LIKES_COUNT = 1000;
 
@@ -37,13 +37,13 @@ queue.process('download_coubs', 5, function (job, done) {
 
         // async loop to fetch liked coubs
         async.doWhilst(function (cb) {
-            request.get('/likes/by_channel', {
+            request.get('http://coub.com/api/v2/likes/by_channel', {
                 qs: {
                     channel_id: channelId,
                     page: page,
                     access_token: accessToken
                 },
-                timeout: 1500
+                timeout: 3000
             }, function (error, response, body) {
                 if (error) {
                     console.log(error);
@@ -124,24 +124,34 @@ queue.process('download_coubs', 5, function (job, done) {
     function processCoubs(data, cb) {
         job.log('Processing %d coubs', data.length);
         console.log('Processing %d coubs', data.length);
+        var request = require('request');
 
         _.each(data, function (coub, k) {
-            var folder = `data/coubs/${coub.permalink}`;
+            var folder = `data/coubs/${coub.id}`;
+            // create folder
+            try {
+                fs.mkdirSync(folder);
+            } catch (e) {
+            }
 
             // prefer mp4, otherwise select first
             var videoType = _.includes(coub.video.types, 'mp4') ? 'mp4' : coub.video.types[0],
-                videoUrl = coub.video.template.replace('%{type}', videoType);
+                videoUrl = coub.video.template.replace(/%\{type}/g, videoType);
 
             // download video with each version
             _.each(coub.video.versions, function (version) {
-                request(videoUrl.replace('%{version}', version))
-                    .pipe(fs.createWriteStream(folder + '/' + version));
+                let url = videoUrl.replace(/%\{version}/g, version);
+                console.log("Download video: " + url);
+
+                request(url).pipe(fs.createWriteStream('test.mp4'));
             });
 
             // download audio (use just one quality)
             if (coub.audio) {
-                request(coub.audio.template.replace('%{version}', coub.audio.version))
-                    .pipe(fs.createWriteStream(folder + '/audio'));
+                let url = coub.audio.template.replace(/%\{version}/g, coub.audio.version);
+                console.log("Download audio: " + url);
+
+                request(url).pipe(fs.createWriteStream(folder + '/audio'));
             }
 
 
