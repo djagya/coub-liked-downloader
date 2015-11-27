@@ -144,7 +144,7 @@
     </object>
     <object type="LMREQUEST" id="z111">
         <attribute name="uuid" type="string">2E6B2777-5A1D-46C2-AAF0-31D518E88208</attribute>
-        <attribute name="url" type="string">http://coub.com/api/v2/coubs/8fvrb</attribute>
+        <attribute name="url" type="string">http://coub.com/api/v2/coubs/8zycauq</attribute>
         <attribute name="storecookies" type="bool">1</attribute>
         <attribute name="sendcookies" type="bool">1</attribute>
         <attribute name="redirectmethod" type="bool">0</attribute>

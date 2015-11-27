@@ -5,9 +5,13 @@ var kue = require('kue'),
 var _ = require('lodash');
 var async = require('async');
 var nodemailer = require('nodemailer');
+var fs = require('fs');
+var execSync = require('child_process').execSync;
 var request = require('request').defaults({
     baseUrl: 'http://coub.com/api/v2/'
 });
+
+const POPULAR_COUB_LIKES_COUNT = 1000;
 
 console.log('Worker started');
 
@@ -26,7 +30,6 @@ queue.process('download_coubs', 5, function (job, done) {
     function getCoubs(channelId, accessToken, cb) {
         var page = 1,
             totalPages = 1,
-        // contains: title, file_versions[web], audio_versions
             coubsData = [];
 
         job.log('Getting likes for %d channel', channelId);
@@ -52,25 +55,38 @@ queue.process('download_coubs', 5, function (job, done) {
                     cb('API error');
                 }
 
+                /** @see http://coub.com/dev/docs/Coub+API/Data+stuctures **/
                 var jsonResult = JSON.parse(body);
 
                 _.each(jsonResult.coubs, function (coub) {
-                    coubsData.push({
+                    var preparedData = {
                         id: coub.permalink,
                         title: coub.title,
                         video: coub.file_versions.web,
-                        audio: coub.audio_versions
-                    });
-                });
+                        likesCount: coub.likes_count,
+                        duration: coub.duration
+                    };
 
-                totalPages = jsonResult.total_pages;
+                    // if coub has audio (otherwise video by itself can have builtin audio)
+                    if (Object.keys(coub.audio_versions).length) {
+                        // remove not needed chunks property and get only mid version
+                        preparedData.audio = {
+                            template: coub.audio_versions.template,
+                            version: coub.audio_versions.versions[1] || coub.audio_versions.versions[0]
+                        };
+                    }
+
+                    coubsData.push(preparedData);
+                });
 
                 job.log('Page %d done', page);
                 console.log('Page %d done', page);
+
+                totalPages = jsonResult.total_pages;
                 page++;
 
-                // update job progress (make it so that when all coubs loaded = 10%, since processing is another 90%)
-                job.progress(page * jsonResult.per_page, jsonResult.per_page * totalPages * 10);
+                // update job progress (make it so that when all coubs loaded = 15%, since email sending = 5% and processing is another 80%)
+                job.progress(page * jsonResult.per_page, (jsonResult.per_page * totalPages * 100) / 15);
 
                 // call callback to iterate further
                 cb();
@@ -87,22 +103,101 @@ queue.process('download_coubs', 5, function (job, done) {
         });
     }
 
+    /**
+     * @param data structure: {
+     *  id: permalink,
+     *  title: string,
+     *  video: {
+     *      template: string, // http://.../%{type}_%{version}_size_1443337522_%{version}.%{type}
+     *      types: ['flv', 'mp4'],
+     *      versions: ['big', 'med', 'small'],
+     *  },
+     *  audio: { // could be empty, http://.../%{version}_1438269759_fn9716_normalized_1438261874_audio.mp3
+     *      template: string,
+     *      version: 'mid',
+     *  },
+     *  likesCount: int,
+     *  durationL int,
+     * }
+     * @param cb
+     */
     function processCoubs(data, cb) {
-        // download to a folder
-        // each should have name
-
-
-        // todo: do not download files, use remote file urls for ffmpeg and ffprobe
-        // how to download:
-        // 1. get video
-        // 2. get audion
-        // 3. check audio (with ffprobe: ffprobe -i input.mp4 -show_entries format=duration -v quiet -of csv="p=0") and video duarations
-        // 4. if audio > video: ffmpeg -f concat -i list.txt -i input.mp3 -c copy output.mp4 , where list.txt is the repeated video names like "file 'input.mp4'" on each line n times, where n = audio_duration/video_duration
-
         job.log('Processing %d coubs', data.length);
         console.log('Processing %d coubs', data.length);
 
-        job.progress(40, 100);
+        _.each(data, function (coub, k) {
+            var folder = `data/coubs/${coub.permalink}`;
+
+            // prefer mp4, otherwise select first
+            var videoType = _.includes(coub.video.types, 'mp4') ? 'mp4' : coub.video.types[0],
+                videoUrl = coub.video.template.replace('%{type}', videoType);
+
+            // download video with each version
+            _.each(coub.video.versions, function (version) {
+                request(videoUrl.replace('%{version}', version))
+                    .pipe(fs.createWriteStream(folder + '/' + version));
+            });
+
+            // download audio (use just one quality)
+            if (coub.audio) {
+                request(coub.audio.template.replace('%{version}', coub.audio.version))
+                    .pipe(fs.createWriteStream(folder + '/audio'));
+            }
+
+
+            // concat video and audio (if any)
+            let commands = [];
+            if (coub.audio) {
+                // check audio duration
+                let audioDuaration =
+                    execSync('ffprobe -i ' + folder + '/audio -show_entries format=duration -v quiet -of csv="p=0"').toString();
+                if (audioDuaration > coub.duration) {
+                    // audio is longer, prepare file for video repeat
+                    let videoRepeatTimes = Math.round(audioDuaration / coub.duration);
+
+                    _.each(coub.video.versions, function (version) {
+                        for (let i = 0; i < videoRepeatTimes; i++) {
+                            fs.appendFileSync(`${folder}/${version}.txt`, `file '${version}'`);
+                        }
+
+                        commands.push(`ffmpeg -f concat -i ${folder}/${version}.txt -i ${folder}/audio -c copy ${folder}/done.mp4`);
+                    });
+                } else {
+                    _.each(coub.video.versions, function (version) {
+                        commands.push(`ffmpeg -i ${folder}/${version} -i ${folder}/audio -c copy ${folder}/done.mp4`);
+                    });
+                }
+            } else {
+                _.each(coub.video.versions, function (version) {
+                    commands.push(`ffmpeg -i ${folder}/${version} -c copy ${folder}/done.mp4`);
+                });
+            }
+
+            // execute commands
+            _.each(commands, function (item) {
+                console.log(execSync(item).toString());
+            });
+
+
+            // clear not popular coubs after processing to save disk space
+            if (app.get('env') === 'production' && coub.likesCount < POPULAR_COUB_LIKES_COUNT) {
+                _.each(coub.video.versions, function (version) {
+                    fs.unlink(folder + version, () => {
+                    });
+                });
+
+                fs.unlink(folder + 'audio', () => {
+                })
+            }
+
+            // todo 15% + current progress + rest 5% for email
+            job.progress(k, data.length);
+        });
+
+        // todo archive done videos
+        _.each(data, function (coub) {
+
+        });
 
         cb();
     }
