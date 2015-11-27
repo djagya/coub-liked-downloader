@@ -143,7 +143,7 @@ queue.process('download_coubs', 5, function (job, done) {
                 let url = videoUrl.replace(/%\{version}/g, version);
                 console.log("Download video: " + url);
 
-                request(url).pipe(fs.createWriteStream('test.mp4'));
+                request(url).pipe(fs.createWriteStream(folder + '/' + version));
             });
 
             // download audio (use just one quality)
