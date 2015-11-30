@@ -10,6 +10,7 @@ var nodemailer = require('nodemailer');
 var fs = require('fs');
 var execSync = require('child_process').execSync;
 var request = require('request');
+var rmdir = require('rimraf');
 
 const POPULAR_COUB_LIKES_COUNT = 1000;
 
@@ -92,6 +93,7 @@ queue.process('download_coubs', 5, function (job, done) {
                 cb();
             });
         }, function () {
+            //return page < 1;
             return page < totalPages;
         }, function (err) {
             if (err) {
@@ -132,76 +134,123 @@ queue.process('download_coubs', 5, function (job, done) {
             try {
                 fs.mkdirSync(folder);
             } catch (e) {
+                console.log(e);
+                return;
             }
 
             // prefer mp4, otherwise select first
             var videoType = _.includes(coub.video.types, 'mp4') ? 'mp4' : coub.video.types[0],
                 videoUrl = coub.video.template.replace(/%\{type}/g, videoType);
 
-            // download video with each version
-            _.each(coub.video.versions, function (version) {
-                let url = videoUrl.replace(/%\{version}/g, version);
-                console.log("Download video: " + url);
+            async.series([
+                function (cb) {
+                    // parallel download video and audio data
+                    async.parallel([
+                        function (cb) {
+                            // download video with each version
+                            async.each(coub.video.versions, function (version, cb) {
+                                let url = videoUrl.replace(/%\{version}/g, version);
+                                console.log("Download video: " + url);
 
-                request(url).pipe(fs.createWriteStream(folder + '/' + version));
-            });
+                                request(url)
+                                    .on('end', function () {
+                                        console.log('Item is downloaded');
+                                        cb();
+                                    })
+                                    .on('error', function (err) {
+                                        cb(err);
+                                    })
+                                    .pipe(fs.createWriteStream(folder + '/' + version));
+                            }, function (err) {
+                                if (err) {
+                                    cb(err);
+                                }
 
-            // download audio (use just one quality)
-            if (coub.audio) {
-                let url = coub.audio.template.replace(/%\{version}/g, coub.audio.version);
-                console.log("Download audio: " + url);
+                                cb();
+                            });
+                        },
+                        function (cb) {
+                            // download audio (use just one quality)
+                            if (!coub.audio) {
+                                return cb();
+                            }
 
-                request(url).pipe(fs.createWriteStream(folder + '/audio'));
-            }
+                            let url = coub.audio.template.replace(/%\{version}/g, coub.audio.version);
+                            console.log("Download audio: " + url);
 
-
-            // concat video and audio (if any)
-            let commands = [];
-            if (coub.audio) {
-                // check audio duration
-                let audioDuaration =
-                    execSync('ffprobe -i ' + folder + '/audio -show_entries format=duration -v quiet -of csv="p=0"').toString();
-                if (audioDuaration > coub.duration) {
-                    // audio is longer, prepare file for video repeat
-                    let videoRepeatTimes = Math.round(audioDuaration / coub.duration);
-
-                    _.each(coub.video.versions, function (version) {
-                        for (let i = 0; i < videoRepeatTimes; i++) {
-                            fs.appendFileSync(`${folder}/${version}.txt`, `file '${version}'`);
+                            request(url)
+                                .on('end', function () {
+                                    console.log('Item is downloaded');
+                                    cb();
+                                })
+                                .on('error', function (err) {
+                                    cb(err);
+                                })
+                                .pipe(fs.createWriteStream(folder + '/audio'));
+                        }
+                    ], function (err) {
+                        if (err) {
+                            console.log(err);
                         }
 
-                        commands.push(`ffmpeg -f concat -i ${folder}/${version}.txt -i ${folder}/audio -c copy ${folder}/done.mp4`);
+                        console.log('Data downloading is finished');
+                        cb();
                     });
-                } else {
-                    _.each(coub.video.versions, function (version) {
-                        commands.push(`ffmpeg -i ${folder}/${version} -i ${folder}/audio -c copy ${folder}/done.mp4`);
+                }, function (cb) {
+                    // concat video and audio (if any)
+                    let commands = [];
+                    if (coub.audio) {
+                        // check audio duration
+                        let audioDuaration =
+                            execSync('ffprobe -i ' + folder + '/audio -show_entries format=duration -v quiet -of csv="p=0"').toString();
+                        if (audioDuaration > coub.duration) {
+                            // audio is longer, prepare file for video repeat
+                            let videoRepeatTimes = Math.round(audioDuaration / coub.duration);
+
+                            _.each(coub.video.versions, function (version) {
+                                for (let i = 0; i < videoRepeatTimes; i++) {
+                                    fs.appendFileSync(`${folder}/${version}.txt`, `file '${version}'\n`);
+                                }
+
+                                commands
+                                    .push(`ffmpeg -f concat -i ${folder}/${version}.txt -i ${folder}/audio -c copy ${folder}/done_${version}.mp4`);
+                            });
+                        } else {
+                            _.each(coub.video.versions, function (version) {
+                                commands.push(`ffmpeg -i ${folder}/${version} -i ${folder}/audio -c copy ${folder}/done_${version}.mp4`);
+                            });
+                        }
+                    } else {
+                        _.each(coub.video.versions, function (version) {
+                            commands.push(`ffmpeg -i ${folder}/${version} -c copy ${folder}/done_${version}.mp4`);
+                        });
+                    }
+
+                    // execute commands
+                    _.each(commands, function (item) {
+                        console.log('Processing command ' + item);
+                        execSync(item);
+                        console.log('Finished');
                     });
+
+
+                    // clear not popular coubs after processing to save disk space
+                    if (process.env.ENV === 'production' && coub.likesCount < POPULAR_COUB_LIKES_COUNT) {
+                        rmdir(folder, function (err) {
+                            console.log(err);
+                        });
+                    }
+
+                    // todo 15% + current progress + rest 5% for email
+                    job.progress(k, data.length);
+
+                    cb();
                 }
-            } else {
-                _.each(coub.video.versions, function (version) {
-                    commands.push(`ffmpeg -i ${folder}/${version} -c copy ${folder}/done.mp4`);
-                });
-            }
-
-            // execute commands
-            _.each(commands, function (item) {
-                console.log(execSync(item).toString());
+            ], function (err) {
+                if (err) {
+                    console.log(err);
+                }
             });
-
-
-            // clear not popular coubs after processing to save disk space
-            if (app.get('env') === 'production' && coub.likesCount < POPULAR_COUB_LIKES_COUNT) {
-                _.each(coub.video.versions, function (version) {
-                    fs.unlink(folder + version, () => {
-                    });
-                });
-
-                fs.unlink(folder + 'audio', () => {
-                })
-            }
-
-            // todo 15% + current progress + rest 5% for email
-            job.progress(k, data.length);
         });
 
         // todo archive done videos
