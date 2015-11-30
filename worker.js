@@ -124,15 +124,18 @@ queue.process('download_coubs', 5, function (job, done) {
      * @param cb
      */
     function processCoubs(data, cb) {
+        // todo delete sources
         job.log('Processing %d coubs', data.length);
         console.log('Processing %d coubs', data.length);
         var request = require('request');
 
         _.each(data, function (coub, k) {
-            var folder = `data/coubs/${coub.id}`;
-            // create folder
+            var folder = `data/sources/${coub.id}`,
+                doneFolder = `data/coubs/${coub.id}`;
+            // create folders
             try {
                 fs.mkdirSync(folder);
+                fs.mkdirSync(doneFolder);
             } catch (e) {
                 console.log(e);
                 return;
@@ -213,16 +216,16 @@ queue.process('download_coubs', 5, function (job, done) {
                                 }
 
                                 commands
-                                    .push(`ffmpeg -f concat -i ${folder}/${version}.txt -i ${folder}/audio -c copy ${folder}/done_${version}.mp4`);
+                                    .push(`ffmpeg -f concat -i ${folder}/${version}.txt -i ${folder}/audio -c copy ${doneFolder}/${version}.mp4`);
                             });
                         } else {
                             _.each(coub.video.versions, function (version) {
-                                commands.push(`ffmpeg -i ${folder}/${version} -i ${folder}/audio -c copy ${folder}/done_${version}.mp4`);
+                                commands.push(`ffmpeg -i ${folder}/${version} -i ${folder}/audio -c copy ${doneFolder}/${version}.mp4`);
                             });
                         }
                     } else {
                         _.each(coub.video.versions, function (version) {
-                            commands.push(`ffmpeg -i ${folder}/${version} -c copy ${folder}/done_${version}.mp4`);
+                            commands.push(`ffmpeg -i ${folder}/${version} -c copy ${doneFolder}/${version}.mp4`);
                         });
                     }
 
@@ -233,12 +236,19 @@ queue.process('download_coubs', 5, function (job, done) {
                         console.log('Finished');
                     });
 
-
-                    // clear not popular coubs after processing to save disk space
-                    if (process.env.ENV === 'production' && coub.likesCount < POPULAR_COUB_LIKES_COUNT) {
+                    if (process.env.ENV === 'production') {
+                        // clear sources
                         rmdir(folder, function (err) {
                             console.log(err);
                         });
+
+                        // delete not popular coubs after processing to save disk space
+                        // todo rethink it
+                        //if (coub.likesCount < POPULAR_COUB_LIKES_COUNT) {
+                        //    rmdir(doneFolder, function (err) {
+                        //        console.log(err);
+                        //    });
+                        //}
                     }
 
                     // todo 15% + current progress + rest 5% for email
