@@ -26,7 +26,7 @@ queue.process('download_coubs', 5, function (job, done) {
 
     // check if there is already an archive and it's not older than 1 day
     // todo check if it's not older than one day
-    if (fs.existsSync(getArchiveFilename())) {
+    if (fs.existsSync(`data/channels/${job.data.channel_id}`)) {
         console.log('Channel %d already has an archive', job.data.channel_id);
         return done();
     }
@@ -215,8 +215,10 @@ queue.process('download_coubs', 5, function (job, done) {
                 var commands = [];
                 _.each(coub.video.versions, function (version) {
                     commands.push(function (cb) {
-                        console.log('Processing command ' + baseCommand);
-                        exec(baseCommand.replace(/%\{version}/g, version) + getDestDoneFilename(coub, version), cb);
+                        var command = baseCommand.replace(/%\{version}/g, version) + getDestDoneFilename(coub, version);
+
+                        console.log('Processing command ' + command);
+                        exec(command, cb);
                     });
                 });
                 async.parallel(commands, function (err) {
@@ -255,8 +257,20 @@ queue.process('download_coubs', 5, function (job, done) {
      * @param cb
      */
     function archive(data, cb) {
+        var folder = `data/channels/${job.data.channel_id}`;
+
+        try {
+            fs.mkdirSync(folder);
+        } catch (e) {
+            console.log(e);
+            return cb();
+        }
+
         _.each(['big', 'med', 'small'], function (version) {
-            var archive = archiver.create('zip', {});
+            var output = fs.createWriteStream(getArchiveFilename(version)),
+                archive = archiver.create('zip', {});
+
+            archive.pipe(output);
 
             _.each(data, function (coub) {
                 archive.file(getDestDoneFilename(coub, version), {name: coub.title + '.mp4'});
@@ -361,7 +375,7 @@ queue.process('download_coubs', 5, function (job, done) {
         return fs.existsSync(FOLDER_DONE + '/' + coub.id);
     }
 
-    function getArchiveFilename() {
-        return `data/channels/${job.data.channel_id}.zip`;
+    function getArchiveFilename(version) {
+        return `data/channels/${job.data.channel_id}/${version}.zip`;
     }
 });
