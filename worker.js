@@ -1,18 +1,22 @@
+/*jslint node: true */
 'use strict';
 
+const POPULAR_COUB_LIKES_COUNT = 1000;
+const FOLDER_SOURCES = 'data/sources';
+const FOLDER_DONE = 'data/coubs';
+
 var kue = require('kue'),
-    queue = queue = kue.createQueue({
+    queue = kue.createQueue({
         redis: process.env.REDIS_URL
     });
 var _ = require('lodash');
 var async = require('async');
 var nodemailer = require('nodemailer');
 var fs = require('fs');
-var execSync = require('child_process').execSync;
+var exec = require('child_process').exec,
+    execSync = require('child_process').execSync;
 var request = require('request');
 var rmdir = require('rimraf');
-
-const POPULAR_COUB_LIKES_COUNT = 1000;
 
 console.log('Worker started');
 
@@ -21,19 +25,39 @@ queue.process('download_coubs', 5, function (job, done) {
     // todo check if there is already an archive and it's not older than 1 day
     console.log('Processing job');
 
-    getCoubs(job.data.channel_id, job.data.access_token, function (data) {
-        processCoubs(data, function () {
+    async.waterfall([
+        function (cb) {
+            return getCoubs(job.data.channel_id, job.data.access_token, cb);
+        },
+        function (data, cb) {
+            return processCoubs(data, cb);
+        },
+        function (data, cb) {
+            return archive(data, cb);
+        },
+        function (cb) {
             // todo get url dynamically
-            sendEmail(job.data.email, 'https://coub-downloader.herokuapp.com/download/' + job.data.channel_id, done);
-        });
+            return sendEmail(job.data.email, 'https://coub-downloader.herokuapp.com/download/' + job.data.channel_id, cb);
+        }
+    ], function (err) {
+        if (err) {
+            // todo fail the job
+        }
+
+        done();
     });
 
+    /**
+     * Fetch Coubs by channel id and create needed data array
+     * @param channelId
+     * @param accessToken
+     * @param cb
+     */
     function getCoubs(channelId, accessToken, cb) {
         var page = 1,
             totalPages = 1,
             coubsData = [];
 
-        job.log('Getting likes for %d channel', channelId);
         console.log('Getting likes for %d channel', channelId);
 
         // async loop to fetch liked coubs
@@ -51,7 +75,7 @@ queue.process('download_coubs', 5, function (job, done) {
                     cb('API error');
                 }
 
-                if (response.statusCode != 200) {
+                if (response.statusCode !== 200) {
                     console.log('Error: Status code ' + response.statusCode + ', body: ' + body);
                     cb('API error');
                 }
@@ -80,7 +104,6 @@ queue.process('download_coubs', 5, function (job, done) {
                     coubsData.push(preparedData);
                 });
 
-                job.log('Page %d done', page);
                 console.log('Page %d done', page);
 
                 totalPages = jsonResult.total_pages;
@@ -96,12 +119,7 @@ queue.process('download_coubs', 5, function (job, done) {
             //return page < 1;
             return page < totalPages;
         }, function (err) {
-            if (err) {
-                console.log(err);
-                throw new Error(err);
-            }
-
-            cb(coubsData);
+            cb(err, coubsData);
         });
     }
 
@@ -124,146 +142,108 @@ queue.process('download_coubs', 5, function (job, done) {
      * @param cb
      */
     function processCoubs(data, cb) {
-        // todo delete sources
-        job.log('Processing %d coubs', data.length);
         console.log('Processing %d coubs', data.length);
-        var request = require('request');
 
-        _.each(data, function (coub, k) {
-            var folder = `data/sources/${coub.id}`,
-                doneFolder = `data/coubs/${coub.id}`;
-            // create folders
-            try {
-                fs.mkdirSync(folder);
-                fs.mkdirSync(doneFolder);
-            } catch (e) {
-                console.log(e);
-                return;
-            }
-
-            // prefer mp4, otherwise select first
-            var videoType = _.includes(coub.video.types, 'mp4') ? 'mp4' : coub.video.types[0],
-                videoUrl = coub.video.template.replace(/%\{type}/g, videoType);
-
-            async.series([
-                function (cb) {
-                    // parallel download video and audio data
-                    async.parallel([
-                        function (cb) {
-                            // download video with each version
-                            async.each(coub.video.versions, function (version, cb) {
-                                let url = videoUrl.replace(/%\{version}/g, version);
-                                console.log("Download video: " + url);
-
-                                request(url)
-                                    .on('end', function () {
-                                        console.log('Item is downloaded');
-                                        cb();
-                                    })
-                                    .on('error', function (err) {
-                                        cb(err);
-                                    })
-                                    .pipe(fs.createWriteStream(folder + '/' + version));
-                            }, function (err) {
-                                if (err) {
-                                    cb(err);
-                                }
-
-                                cb();
-                            });
-                        },
-                        function (cb) {
-                            // download audio (use just one quality)
-                            if (!coub.audio) {
-                                return cb();
-                            }
-
-                            let url = coub.audio.template.replace(/%\{version}/g, coub.audio.version);
-                            console.log("Download audio: " + url);
-
-                            request(url)
-                                .on('end', function () {
-                                    console.log('Item is downloaded');
-                                    cb();
-                                })
-                                .on('error', function (err) {
-                                    cb(err);
-                                })
-                                .pipe(fs.createWriteStream(folder + '/audio'));
-                        }
-                    ], function (err) {
-                        if (err) {
-                            console.log(err);
-                        }
-
-                        console.log('Data downloading is finished');
-                        cb();
-                    });
-                }, function (cb) {
-                    // concat video and audio (if any)
-                    let commands = [];
-                    if (coub.audio) {
-                        // check audio duration
-                        let audioDuaration =
-                            execSync('ffprobe -i ' + folder + '/audio -show_entries format=duration -v quiet -of csv="p=0"').toString();
-                        if (audioDuaration > coub.duration) {
-                            // audio is longer, prepare file for video repeat
-                            let videoRepeatTimes = Math.round(audioDuaration / coub.duration);
-
-                            _.each(coub.video.versions, function (version) {
-                                for (let i = 0; i < videoRepeatTimes; i++) {
-                                    fs.appendFileSync(`${folder}/${version}.txt`, `file '${version}'\n`);
-                                }
-
-                                commands
-                                    .push(`ffmpeg -f concat -i ${folder}/${version}.txt -i ${folder}/audio -c copy ${doneFolder}/${version}.mp4`);
-                            });
-                        } else {
-                            _.each(coub.video.versions, function (version) {
-                                commands.push(`ffmpeg -i ${folder}/${version} -i ${folder}/audio -c copy ${doneFolder}/${version}.mp4`);
-                            });
-                        }
-                    } else {
-                        _.each(coub.video.versions, function (version) {
-                            commands.push(`ffmpeg -i ${folder}/${version} -c copy ${doneFolder}/${version}.mp4`);
-                        });
-                    }
-
-                    // execute commands
-                    _.each(commands, function (item) {
-                        console.log('Processing command ' + item);
-                        execSync(item);
-                        console.log('Finished');
-                    });
-
-                    if (process.env.ENV === 'production') {
-                        // clear sources
-                        rmdir(folder, function (err) {
-                            console.log(err);
-                        });
-
-                        // delete not popular coubs after processing to save disk space
-                        // todo rethink it
-                        //if (coub.likesCount < POPULAR_COUB_LIKES_COUNT) {
-                        //    rmdir(doneFolder, function (err) {
-                        //        console.log(err);
-                        //    });
-                        //}
-                    }
-
-                    // todo 15% + current progress + rest 5% for email
-                    job.progress(k, data.length);
-
-                    cb();
-                }
-            ], function (err) {
-                if (err) {
-                    console.log(err);
-                }
-            });
+        async.each(data, function (coub, cb) {
+            return process(coub, cb);
+        }, function (err) {
+            cb(err, data);
         });
+    }
 
-        // todo archive done videos
+    /**
+     * Process one coub
+     */
+    function process(coub, cb) {
+        // ensure that coub doesn't exist yet
+        if (isCoubProcessed(coub)) {
+            console.log(`Coub ${coub.id} is already processed`);
+            return cb();
+        }
+
+        var folder = FOLDER_SOURCES + `/${coub.id}`,
+            doneFolder = FOLDER_DONE + `/${coub.id}`;
+
+        // create folders, in case of error - skip coub, it means it was processed already
+        try {
+            fs.mkdirSync(folder);
+            fs.mkdirSync(doneFolder);
+        } catch (e) {
+            console.log(e);
+            return cb();
+        }
+
+        async.series([
+            function (cb) {
+                return downloadFiles(coub, folder, cb);
+            },
+            function (cb) {
+                // concat video and audio (if any)
+                let baseCommand;
+
+                if (coub.audio) {
+                    // check audio duration
+                    let audioDuaration =
+                        execSync('ffprobe -i ' + folder + '/audio -show_entries format=duration -v quiet -of csv="p=0"').toString();
+
+                    if (audioDuaration > coub.duration) {
+                        // audio is longer, prepare file for video repeat
+                        let videoRepeatTimes = Math.round(audioDuaration / coub.duration);
+
+                        // prepare text file to repeat videos
+                        _.each(coub.video.versions, function (version) {
+                            for (let i = 0; i < videoRepeatTimes; i++) {
+                                fs.appendFileSync(`${folder}/${version}.txt`, `file '${version}'\n`);
+                            }
+                        });
+
+                        baseCommand = `ffmpeg -f concat -i ${folder}/%{version}.txt -i ${folder}/audio -c copy `;
+                    } else {
+                        baseCommand = `ffmpeg -i ${folder}/%{version} -i ${folder}/audio -c copy `;
+                    }
+                } else {
+                    baseCommand = `ffmpeg -i ${folder}/%{version} -c copy `;
+                }
+
+                // create and execute commands
+                var commands = [];
+                _.each(coub.video.versions, function (version) {
+                    commands.push(function (cb) {
+                        console.log('Processing command ' + baseCommand);
+                        exec(baseCommand.replace(/%\{version}/g, version) + getDestDoneFilename(coub, version), cb);
+                    });
+                });
+                async.parallel(commands, function (err) {
+                    // todo 15% + current progress + rest 5% for email
+                    job.progress(80, 100);
+
+                    cb(err);
+                });
+
+                // clear things
+                //if (process.env.ENV === 'production') {
+                //    // clear sources
+                //    // todo delete sources (but what if someone do the same coub?)
+                //    rmdir(folder, function (err) {
+                //        console.log(err);
+                //    });
+                //
+                //    // delete not popular coubs after processing to save disk space
+                //    // todo rethink it
+                //    //if (coub.likesCount < POPULAR_COUB_LIKES_COUNT) {
+                //    //    rmdir(doneFolder, function (err) {
+                //    //        console.log(err);
+                //    //    });
+                //    //}
+                //}
+
+            }
+        ], function (err) {
+            cb(err);
+        });
+    }
+
+    function archive(data, cb) {
         _.each(data, function (coub) {
 
         });
@@ -271,35 +251,95 @@ queue.process('download_coubs', 5, function (job, done) {
         cb();
     }
 
+    /**
+     * Send notification that it's done
+     * @param to
+     * @param link
+     * @param cb
+     */
     function sendEmail(to, link, cb) {
-        job.log('Sending email to %s', to);
         console.log('Sending email to %s', to);
         job.progress(90, 100);
 
         var transporter = nodemailer.createTransport({
-            service: 'Gmail',
-            auth: {
-                user: 'danil.kabluk@gmail.com',
-                pass: '8K736MA8Y5N'
-            }
-        });
+                service: 'Gmail',
+                auth: {
+                    user: 'danil.kabluk@gmail.com',
+                    pass: '8K736MA8Y5N'
+                }
+            }),
+            mailOptions = {
+                from: 'Coub downloader',
+                to: to, // list of receivers
+                subject: 'Your archive is ready!',
+                html: '<a href="' + link + '">Link</a>'
+            };
 
-        var mailOptions = {
-            from: 'Coub downloader',
-            to: to, // list of receivers
-            subject: 'Your archive is ready!',
-            html: '<a href="' + link + '">Link</a>'
-        };
-
-        transporter.sendMail(mailOptions, function (error, info) {
-            if (error) {
-                console.log(error);
-                // todo fail the job
-            } else {
+        transporter.sendMail(mailOptions, function (err, info) {
+            if (!err) {
                 console.log('Message sent: ' + info.response);
             }
 
-            cb();
+            cb(err);
         });
+    }
+
+    function downloadFiles(coub, folder, cb) {
+        // prefer mp4, otherwise select first
+        var videoType = _.includes(coub.video.types, 'mp4') ? 'mp4' : coub.video.types[0],
+            videoUrl = coub.video.template.replace(/%\{type}/g, videoType);
+
+        // parallel download video and audio data
+        async.parallel([
+            function (cb) {
+                // download video with each version
+                async.each(coub.video.versions, function (version, cb) {
+                    let url = videoUrl.replace(/%\{version}/g, version);
+                    console.log("Download video: " + url);
+
+                    request(url)
+                        .on('end', function () {
+                            console.log('Item is downloaded');
+                            cb();
+                        })
+                        .on('error', function (err) {
+                            cb(err);
+                        })
+                        .pipe(fs.createWriteStream(folder + '/' + version));
+                }, function (err) {
+                    cb(err);
+                });
+            },
+            function (cb) {
+                // download audio (use just one quality)
+                if (!coub.audio) {
+                    return cb();
+                }
+
+                let url = coub.audio.template.replace(/%\{version}/g, coub.audio.version);
+                console.log("Download audio: " + url);
+
+                request(url)
+                    .on('end', function () {
+                        console.log('Item is downloaded');
+                        cb();
+                    })
+                    .on('error', function (err) {
+                        cb(err);
+                    })
+                    .pipe(fs.createWriteStream(folder + '/audio'));
+            }
+        ], function (err) {
+            console.log('Data downloading is finished');
+            cb(err);
+        });
+    }
+
+    function getDestDoneFilename(coub, version) {
+        return FOLDER_DONE + `/${coub.id}/${version}/${coub.title}.mp4`;
+    }
+
+    function isCoubProcessed(coub) {
+        return fs.existsSync(FOLDER_DONE + '/' + coub.id);
     }
 });
