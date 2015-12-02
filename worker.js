@@ -16,6 +16,7 @@ var exec = require('child_process').exec,
     execSync = require('child_process').execSync;
 var request = require('request');
 var rmdir = require('rimraf');
+var archiver = require('archiver');
 
 console.log('Worker started');
 
@@ -248,11 +249,23 @@ queue.process('download_coubs', 5, function (job, done) {
         });
     }
 
+    /**
+     * Create an archive for each version
+     * @param data
+     * @param cb
+     */
     function archive(data, cb) {
-        _.each(data, function (coub) {
+        _.each(['big', 'med', 'small'], function (version) {
+            var archive = archiver.create('zip', {});
 
+            _.each(data, function (coub) {
+                archive.file(getDestDoneFilename(coub, version), {name: coub.title + '.mp4'});
+            });
+
+            archive.finalize();
         });
 
+        // todo call cb on finish all archives
         cb();
     }
 
@@ -341,7 +354,7 @@ queue.process('download_coubs', 5, function (job, done) {
     }
 
     function getDestDoneFilename(coub, version) {
-        return FOLDER_DONE + `/${coub.id}/${version}/${coub.title}.mp4`;
+        return FOLDER_DONE + `/${coub.id}/${version}.mp4`;
     }
 
     function isCoubProcessed(coub) {
