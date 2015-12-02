@@ -1,4 +1,3 @@
-/*jslint node: true */
 'use strict';
 
 const POPULAR_COUB_LIKES_COUNT = 1000;
@@ -22,8 +21,14 @@ console.log('Worker started');
 
 // process queue
 queue.process('download_coubs', 5, function (job, done) {
-    // todo check if there is already an archive and it's not older than 1 day
     console.log('Processing job');
+
+    // check if there is already an archive and it's not older than 1 day
+    // todo check if it's not older than one day
+    if (fs.existsSync(getArchiveFilename())) {
+        console.log('Channel %d already has an archive', job.data.channel_id);
+        return done();
+    }
 
     async.waterfall([
         function (cb) {
@@ -41,7 +46,7 @@ queue.process('download_coubs', 5, function (job, done) {
         }
     ], function (err) {
         if (err) {
-            // todo fail the job
+            return done(new Error(err));
         }
 
         done();
@@ -341,5 +346,9 @@ queue.process('download_coubs', 5, function (job, done) {
 
     function isCoubProcessed(coub) {
         return fs.existsSync(FOLDER_DONE + '/' + coub.id);
+    }
+
+    function getArchiveFilename() {
+        return `data/channels/${job.data.channel_id}.zip`;
     }
 });
