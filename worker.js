@@ -3,11 +3,14 @@
 const POPULAR_COUB_LIKES_COUNT = 1000;
 const FOLDER_SOURCES = 'data/sources';
 const FOLDER_DONE = 'data/coubs';
+const CACHE_DURATION = 3600;
 
 var kue = require('kue'),
     queue = kue.createQueue({
         redis: process.env.REDIS_URL
     });
+var redis = require('redis'),
+    client = redis.createClient(process.env.REDIS_URL, {});
 var _ = require('lodash');
 var async = require('async');
 var nodemailer = require('nodemailer');
@@ -28,7 +31,8 @@ queue.process('download_coubs', 5, function (job, done) {
     // todo check if it's not older than one day
     if (fs.existsSync(`data/channels/${job.data.channel_id}`)) {
         console.log('Channel %d already has an archive', job.data.channel_id);
-        return done();
+
+        return sendEmail(job.data.email, 'https://coub-downloader.herokuapp.com/download/' + job.data.channel_id, done);
     }
 
     async.waterfall([
@@ -38,6 +42,7 @@ queue.process('download_coubs', 5, function (job, done) {
         function (data, cb) {
             return processCoubs(data, cb);
         },
+        // todo upload to s3
         function (data, cb) {
             return archive(data, cb);
         },
@@ -47,6 +52,7 @@ queue.process('download_coubs', 5, function (job, done) {
         }
     ], function (err) {
         if (err) {
+            console.log('Job failed: ' + err);
             return done(new Error(err));
         }
 
@@ -62,9 +68,17 @@ queue.process('download_coubs', 5, function (job, done) {
     function getCoubs(channelId, accessToken, cb) {
         var page = 1,
             totalPages = 1,
-            coubsData = [];
+            coubsData = [],
+            cacheKey = `coub_api_data:${job.data.channel_id}`;
 
         console.log('Getting likes for %d channel', channelId);
+
+        // check cache
+        client.get(cacheKey, function (err, res) {
+            if (res) {
+                return cb(null, JSON.parse(res));
+            }
+        });
 
         // async loop to fetch liked coubs
         async.doWhilst(function (cb) {
@@ -74,16 +88,16 @@ queue.process('download_coubs', 5, function (job, done) {
                     page: page,
                     access_token: accessToken
                 },
-                timeout: 3000
+                timeout: 10000
             }, function (error, response, body) {
                 if (error) {
                     console.log(error);
-                    cb('API error');
+                    return cb('API error');
                 }
 
                 if (response.statusCode !== 200) {
                     console.log('Error: Status code ' + response.statusCode + ', body: ' + body);
-                    cb('API error');
+                    return cb('API error');
                 }
 
                 /** @see http://coub.com/dev/docs/Coub+API/Data+stuctures **/
@@ -97,6 +111,11 @@ queue.process('download_coubs', 5, function (job, done) {
                         likesCount: coub.likes_count,
                         duration: coub.duration
                     };
+
+                    // remove 'big' quality for video
+                    _.remove(preparedData.video.versions, function (version) {
+                        return version === 'big';
+                    });
 
                     // if coub has audio (otherwise video by itself can have builtin audio)
                     if (Object.keys(coub.audio_versions).length) {
@@ -122,10 +141,15 @@ queue.process('download_coubs', 5, function (job, done) {
                 cb();
             });
         }, function () {
-            //return page < 1;
             return page < totalPages;
         }, function (err) {
-            cb(err, coubsData);
+            if (err) {
+                cb(err);
+            } else {
+                client.setex(cacheKey, CACHE_DURATION, JSON.stringify(coubsData), function (err, res) {
+                    cb(err, coubsData);
+                });
+            }
         });
     }
 
@@ -136,7 +160,7 @@ queue.process('download_coubs', 5, function (job, done) {
      *  video: {
      *      template: string, // http://.../%{type}_%{version}_size_1443337522_%{version}.%{type}
      *      types: ['flv', 'mp4'],
-     *      versions: ['big', 'med', 'small'],
+     *      versions: ['med', 'small'],
      *  },
      *  audio: { // could be empty, http://.../%{version}_1438269759_fn9716_normalized_1438261874_audio.mp3
      *      template: string,
@@ -222,6 +246,8 @@ queue.process('download_coubs', 5, function (job, done) {
                     });
                 });
                 async.parallel(commands, function (err) {
+                    console.log('Commands processed');
+
                     // todo 15% + current progress + rest 5% for email
                     job.progress(80, 100);
 
@@ -266,14 +292,19 @@ queue.process('download_coubs', 5, function (job, done) {
             return cb();
         }
 
-        _.each(['big', 'med', 'small'], function (version) {
+        _.each(['med', 'small'], function (version) {
+            console.log('Processing %s archive', version);
             var output = fs.createWriteStream(getArchiveFilename(version)),
                 archive = archiver.create('zip', {});
 
             archive.pipe(output);
 
             _.each(data, function (coub) {
-                archive.file(getDestDoneFilename(coub, version), {name: coub.title + '.mp4'});
+                try {
+                    archive.file(getDestDoneFilename(coub, version), {name: coub.title + '.mp4'});
+                } catch (err) {
+                    cb(err);
+                }
             });
 
             archive.finalize();
@@ -328,6 +359,11 @@ queue.process('download_coubs', 5, function (job, done) {
                 async.each(coub.video.versions, function (version, cb) {
                     let url = videoUrl.replace(/%\{version}/g, version);
                     console.log("Download video: " + url);
+
+                    if (fs.existsSync(folder + '/' + version)) {
+                        console.log('Cloub %s is already downloaded for version %s', coub.id, version);
+                        return cb();
+                    }
 
                     request(url)
                         .on('end', function () {
