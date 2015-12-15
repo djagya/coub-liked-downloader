@@ -1,3 +1,5 @@
+'use strict';
+
 var express = require('express');
 var router = express.Router();
 var passport = require('../lib/coub-strategy');
@@ -16,11 +18,17 @@ router.get('/', function (req, res) {
 
 router.route('/start')
     .all(function (req, res, next) {
+        //req.user = {
+        //    channel_id: '620873',
+        //    access_token: 'de8e4a792f2f0e15e1d81a0c6ef498e2c64b964f70fee068c5f2bdf466739f8d'
+        //};
+
         // use lodash get, because req.user can be undefined too
         if (!(_.has(req, 'user.access_token') && _.has(req, 'user.channel_id'))) {
             res.redirect('/');
             return;
         }
+        //next();
 
         // if there is already a job with this channel_id - redirect to download page
         client.hget('job_channel_map', req.user.channel_id, function (err, result) {
@@ -61,14 +69,6 @@ router.route('/start')
                 access_token: req.user.access_token,
                 email: req.body.email
             })
-            .on('failed', function () {
-                // remove mapping for failed job
-                client.hdel('job_channel_map', req.user.channel_id, function (err, result) {
-                    if (err) {
-                        console.log(err);
-                    }
-                });
-            })
             .save(function (err) {
                 if (err) {
                     console.log(err);
@@ -86,13 +86,14 @@ router.route('/start')
                         return;
                     }
 
+                    //res.send('ok');
                     res.redirect('/success');
                 });
             });
     });
 
 // get prepared archive or show progress
-router.get('/download/:id', function (req, res) {
+router.get('/status/:id', function (req, res) {
     // search job by channel_id
     client.hget('job_channel_map', req.params.id, function (err, result) {
         if (err) {
@@ -101,6 +102,7 @@ router.get('/download/:id', function (req, res) {
             return;
         }
 
+        // todo show special error page if job is failed
         if (result) {
             // if there is a job - get its progress
             kue.Job.get(result, function (err, job) {
@@ -110,13 +112,13 @@ router.get('/download/:id', function (req, res) {
                     return;
                 }
 
-                if (job._progress == 100) {
+                if (job._progress === 100) {
                     // job is done
                     var data = _.map(qualities, function (label, val) {
                         // todo
                         return {
                             label: label,
-                            link: 'link' + val,
+                            link: `/download/${req.params.id}?q=` + val,
                             size: '15kb'
                         };
                     });
@@ -130,6 +132,36 @@ router.get('/download/:id', function (req, res) {
             res.status(404).send('Not found');
         }
     });
+});
+
+router.get('/download/:id', function (req, res) {
+    // todo pipe archive
+    //var folder = `data/channels/${job.data.channel_id}`;
+    //
+    //try {
+    //    fs.mkdirSync(folder);
+    //} catch (e) {
+    //    console.log(e);
+    //    return cb();
+    //}
+    //
+    //_.each(['med', 'small'], function (version) {
+    //    console.log('Processing %s archive', version);
+    //    var output = fs.createWriteStream(getArchiveFilename(version)),
+    //        archive = archiver.create('zip', {});
+    //
+    //    archive.pipe(output);
+    //
+    //    _.each(data, function (coub) {
+    //        try {
+    //            archive.file(getDestDoneFilename(coub, version), {name: coub.title + '.mp4'});
+    //        } catch (err) {
+    //            cb(err);
+    //        }
+    //    });
+    //
+    //    archive.finalize();
+    //});
 });
 
 router.get('/success', function (req, res) {

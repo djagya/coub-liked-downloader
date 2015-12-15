@@ -23,6 +23,12 @@ var archiver = require('archiver');
 
 console.log('Worker started');
 
+// todo
+// не создавать архив, а стримить его из сделанных коубов без сохранения архива
+// сохранять только done coubs (по тайтлу в папки версий), их и стримить
+
+// todo сохранять только один тип для видео и использовать его везде (для сохраненных готовых кобов)
+
 // process queue
 queue.process('download_coubs', 5, function (job, done) {
     console.log('Processing job');
@@ -41,10 +47,6 @@ queue.process('download_coubs', 5, function (job, done) {
         },
         function (data, cb) {
             return processCoubs(data, cb);
-        },
-        // todo upload to s3
-        function (data, cb) {
-            return archive(data, cb);
         },
         function (cb) {
             // todo get url dynamically
@@ -275,43 +277,6 @@ queue.process('download_coubs', 5, function (job, done) {
         ], function (err) {
             cb(err);
         });
-    }
-
-    /**
-     * Create an archive for each version
-     * @param data
-     * @param cb
-     */
-    function archive(data, cb) {
-        var folder = `data/channels/${job.data.channel_id}`;
-
-        try {
-            fs.mkdirSync(folder);
-        } catch (e) {
-            console.log(e);
-            return cb();
-        }
-
-        _.each(['med', 'small'], function (version) {
-            console.log('Processing %s archive', version);
-            var output = fs.createWriteStream(getArchiveFilename(version)),
-                archive = archiver.create('zip', {});
-
-            archive.pipe(output);
-
-            _.each(data, function (coub) {
-                try {
-                    archive.file(getDestDoneFilename(coub, version), {name: coub.title + '.mp4'});
-                } catch (err) {
-                    cb(err);
-                }
-            });
-
-            archive.finalize();
-        });
-
-        // todo call cb on finish all archives
-        cb();
     }
 
     /**
