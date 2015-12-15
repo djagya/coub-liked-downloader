@@ -165,7 +165,7 @@ router.get('/download/:id', function (req, res) {
 });
 
 router.get('/success', function (req, res) {
-    res.render('finish');
+    res.render('success');
 });
 
 // coub auth stuff
