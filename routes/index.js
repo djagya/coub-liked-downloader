@@ -162,6 +162,10 @@ router.get('/download/:id', function (req, res) {
     //
     //    archive.finalize();
     //});
+
+    //function getArchiveFilename(version) {
+    //    return `data/channels/${job.data.channel_id}/${version}.zip`;
+    //}
 });
 
 router.get('/success', function (req, res) {

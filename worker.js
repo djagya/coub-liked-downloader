@@ -375,8 +375,4 @@ queue.process('download_coubs', 5, function (job, done) {
     function isCoubProcessed(coub) {
         return fs.existsSync(FOLDER_DONE + '/' + coub.id);
     }
-
-    function getArchiveFilename(version) {
-        return `data/channels/${job.data.channel_id}/${version}.zip`;
-    }
 });
