@@ -11,6 +11,10 @@ var kue = require('kue'),
     queue = kue.createQueue({
         redis: process.env.REDIS_URL
     });
+var coubsHelper = require('../helpers/coubs');
+var fs = require('fs');
+var filesize = require('filesize');
+var archiver = require('archiver');
 
 router.get('/', function (req, res) {
     res.render('index');
@@ -113,16 +117,24 @@ router.get('/status/:id', function (req, res) {
                 }
 
                 if (job._progress === 100) {
-                    // job is done
-                    var data = _.map(qualities, function (label, val) {
-                        // todo
-                        return {
-                            label: label,
-                            link: `/download/${req.params.id}?q=` + val,
-                            size: '15kb'
-                        };
+                    coubsHelper.getCoubs(req.user.channel_id, req.user.access_token, function (err, data) {
+                        // job is done
+                        var links = _.map(qualities, function (label, val) {
+                            var size = 0;
+
+                            _.each(data, function (coub) {
+                                size += fs.statSync(coubsHelper.getDestDoneFilename(coub, val)).size;
+                            });
+
+                            return {
+                                label: label,
+                                link: `/download/${req.params.id}?q=` + val,
+                                size: filesize(size)
+                            };
+                        });
+
+                        res.render('download', {data: links});
                     });
-                    res.render('download', {data: data});
                 } else {
                     // show progress bar
                     res.render('progress', {progress: job._progress || 0});
@@ -134,38 +146,33 @@ router.get('/status/:id', function (req, res) {
     });
 });
 
+// pipe done archive to the user
 router.get('/download/:id', function (req, res) {
-    // todo pipe archive
-    //var folder = `data/channels/${job.data.channel_id}`;
-    //
-    //try {
-    //    fs.mkdirSync(folder);
-    //} catch (e) {
-    //    console.log(e);
-    //    return cb();
-    //}
-    //
-    //_.each(['med', 'small'], function (version) {
-    //    console.log('Processing %s archive', version);
-    //    var output = fs.createWriteStream(getArchiveFilename(version)),
-    //        archive = archiver.create('zip', {});
-    //
-    //    archive.pipe(output);
-    //
-    //    _.each(data, function (coub) {
-    //        try {
-    //            archive.file(getDestDoneFilename(coub, version), {name: coub.title + '.mp4'});
-    //        } catch (err) {
-    //            cb(err);
-    //        }
-    //    });
-    //
-    //    archive.finalize();
-    //});
+    var quality = req.params.q || 'med',
+        archive = archiver('zip');
 
-    //function getArchiveFilename(version) {
-    //    return `data/channels/${job.data.channel_id}/${version}.zip`;
-    //}
+    archive.on('error', function (err) {
+        res.status(500).send({error: err.message});
+    });
+
+    // todo date, channel name
+    // arhive name
+    res.attachment(`liked_coubs_${req.user.channel_id}.zip`);
+
+    // pipe to the response stream
+    archive.pipe(res);
+
+    coubsHelper.getCoubs(req.user.channel_id, req.user.access_token, function (err, data) {
+        _.each(data, function (coub) {
+            try {
+                archive.file(coubsHelper.getDestDoneFilename(coub, quality), {name: coub.title + '.mp4'});
+            } catch (err) {
+                console.log('err');
+            }
+        });
+
+        archive.finalize();
+    });
 });
 
 router.get('/success', function (req, res) {

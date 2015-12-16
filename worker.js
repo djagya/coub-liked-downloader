@@ -2,7 +2,6 @@
 
 const POPULAR_COUB_LIKES_COUNT = 1000;
 const FOLDER_SOURCES = 'data/sources';
-const FOLDER_DONE = 'data/coubs';
 
 var kue = require('kue'),
     queue = kue.createQueue({
@@ -17,7 +16,7 @@ var exec = require('child_process').exec,
 var request = require('request');
 var rmdir = require('rimraf');
 var archiver = require('archiver');
-var getCoubs = require('./helpers/getCoubs');
+var coubsHelper = require('./helpers/coubs');
 
 console.log('Worker started');
 
@@ -41,7 +40,7 @@ queue.process('download_coubs', 5, function (job, done) {
 
     async.waterfall([
         function (cb) {
-            var result = getCoubs(job.data.channel_id, job.data.access_token, cb);
+            var result = coubsHelper.getCoubs(job.data.channel_id, job.data.access_token, cb);
 
             // update job progress (make it so that when all coubs loaded = 15%, since email sending = 5% and processing is another 80%)
             job.progress(10, 100);
@@ -103,7 +102,7 @@ queue.process('download_coubs', 5, function (job, done) {
         }
 
         var folder = FOLDER_SOURCES + `/${coub.id}`,
-            doneFolder = FOLDER_DONE + `/${coub.id}`;
+            doneFolder = coubsHelper.FOLDER_DONE + `/${coub.id}`;
 
         // create folders, in case of error - skip coub, it means it was processed already
         try {
@@ -150,7 +149,7 @@ queue.process('download_coubs', 5, function (job, done) {
                 var commands = [];
                 _.each(coub.video.versions, function (version) {
                     commands.push(function (cb) {
-                        var command = baseCommand.replace(/%\{version}/g, version) + getDestDoneFilename(coub, version);
+                        var command = baseCommand.replace(/%\{version}/g, version) + coubsHelper.getDestDoneFilename(coub, version);
 
                         console.log('Processing command ' + command);
                         exec(command, cb);
@@ -277,11 +276,7 @@ queue.process('download_coubs', 5, function (job, done) {
         });
     }
 
-    function getDestDoneFilename(coub, version) {
-        return FOLDER_DONE + `/${coub.id}/${version}.mp4`;
-    }
-
     function isCoubProcessed(coub) {
-        return fs.existsSync(FOLDER_DONE + '/' + coub.id);
+        return fs.existsSync(coubsHelper.FOLDER_DONE + '/' + coub.id);
     }
 });
