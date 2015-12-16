@@ -104,13 +104,16 @@ queue.process('download_coubs', 5, function (job, done) {
         var folder = FOLDER_SOURCES + `/${coub.id}`,
             doneFolder = coubsHelper.FOLDER_DONE + `/${coub.id}`;
 
-        // create folders, in case of error - skip coub, it means it was processed already
         try {
             fs.mkdirSync(folder);
+        } catch (e) {
+            console.log(e);
+        }
+
+        try {
             fs.mkdirSync(doneFolder);
         } catch (e) {
             console.log(e);
-            return cb();
         }
 
         async.series([
@@ -155,7 +158,7 @@ queue.process('download_coubs', 5, function (job, done) {
                         exec(command, cb);
                     });
                 });
-                async.parallel(commands, function (err) {
+                async.parallelLimit(commands, 3, function (err) {
                     console.log('Commands processed');
 
                     // todo 15% + current progress + rest 5% for email
@@ -258,6 +261,12 @@ queue.process('download_coubs', 5, function (job, done) {
                 }
 
                 let url = coub.audio.template.replace(/%\{version}/g, coub.audio.version);
+
+                if (fs.existsSync(folder + '/audio')) {
+                    console.log('Cloub audio %s is already downloaded', coub.id);
+                    return cb();
+                }
+
                 console.log("Download audio: " + url);
 
                 request(url)

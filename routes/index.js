@@ -36,7 +36,7 @@ router.route('/start')
             }
 
             if (result) {
-                res.redirect('/download/' + req.user.channel_id);
+                res.redirect('/status/' + req.user.channel_id);
             } else {
                 next();
             }
@@ -114,14 +114,18 @@ router.get('/status/:id', function (req, res) {
                     return;
                 }
 
-                if (job._progress === 100) {
+                if (job._state === 'complete') {
                     coubsHelper.getCoubs(req.user.channel_id, req.user.access_token, function (err, data) {
                         // job is done
                         var links = _.map(qualities, function (label, val) {
                             var size = 0;
 
                             _.each(data, function (coub) {
-                                size += fs.statSync(coubsHelper.getDestDoneFilename(coub, val)).size;
+                                try {
+                                    size += fs.statSync(coubsHelper.getDestDoneFilename(coub, val)).size;
+                                } catch (err) {
+                                    console.log(err);
+                                }
                             });
 
                             return {
@@ -155,7 +159,7 @@ router.get('/download/:id', function (req, res) {
         archive = archiver('zip');
 
     archive.on('error', function (err) {
-        res.status(500).send({error: err.message});
+        console.log(err);
     });
 
     // todo date, channel name
@@ -167,10 +171,10 @@ router.get('/download/:id', function (req, res) {
 
     coubsHelper.getCoubs(req.user.channel_id, req.user.access_token, function (err, data) {
         _.each(data, function (coub) {
-            try {
-                archive.file(coubsHelper.getDestDoneFilename(coub, quality), {name: coub.title + '.mp4'});
-            } catch (err) {
-                console.log('err');
+            var path = __dirname + '/../' + coubsHelper.getDestDoneFilename(coub, quality);
+
+            if (fs.existsSync(path)) {
+                archive.file(path, {name: coub.title + '.mp4'});
             }
         });
 
