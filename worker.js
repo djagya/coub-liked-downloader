@@ -87,7 +87,7 @@ queue.process('download_coubs', 5, function (job, done) {
         async.each(data, function (coub, cb) {
             return process(coub, cb);
         }, function (err) {
-            cb(err, data);
+            cb(err);
         });
     }
 
