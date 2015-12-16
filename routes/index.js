@@ -22,17 +22,10 @@ router.get('/', function (req, res) {
 
 router.route('/start')
     .all(function (req, res, next) {
-        //req.user = {
-        //    channel_id: '620873',
-        //    access_token: 'de8e4a792f2f0e15e1d81a0c6ef498e2c64b964f70fee068c5f2bdf466739f8d'
-        //};
-
-        // use lodash get, because req.user can be undefined too
-        if (!(_.has(req, 'user.access_token') && _.has(req, 'user.channel_id'))) {
+        if (!ensureUserData(req)) {
             res.redirect('/');
             return;
         }
-        //next();
 
         // if there is already a job with this channel_id - redirect to download page
         client.hget('job_channel_map', req.user.channel_id, function (err, result) {
@@ -98,6 +91,11 @@ router.route('/start')
 
 // get prepared archive or show progress
 router.get('/status/:id', function (req, res) {
+    if (!ensureUserData(req)) {
+        res.redirect('/');
+        return;
+    }
+
     // search job by channel_id
     client.hget('job_channel_map', req.params.id, function (err, result) {
         if (err) {
@@ -148,6 +146,11 @@ router.get('/status/:id', function (req, res) {
 
 // pipe done archive to the user
 router.get('/download/:id', function (req, res) {
+    if (!ensureUserData(req)) {
+        res.redirect('/');
+        return;
+    }
+
     var quality = req.params.q || 'med',
         archive = archiver('zip');
 
@@ -186,5 +189,15 @@ router.get('/callback', passport.authenticate('provider', {
     successRedirect: '/start',
     failureRedirect: '/'
 }));
+
+function ensureUserData(req) {
+    //req.user = {
+    //    channel_id: '620873',
+    //    access_token: 'de8e4a792f2f0e15e1d81a0c6ef498e2c64b964f70fee068c5f2bdf466739f8d'
+    //};
+
+    // use lodash get, because req.user can be undefined too
+    return _.has(req, 'user.access_token') && _.has(req, 'user.channel_id');
+}
 
 module.exports = router;
