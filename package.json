@@ -6,7 +6,6 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
-    "archiver": "^0.20.0",
     "async": "^1.5.0",
     "body-parser": "~1.13.2",
     "commander": "^2.9.0",
@@ -17,8 +16,6 @@
     "express-session": "^1.12.1",
     "express-validator": "^2.18.0",
     "filesize": "^3.1.4",
-    "jade": "~1.11.0",
-    "kue": "^0.10.4",
     "lodash": "^3.10.1",
     "morgan": "~1.6.1",
     "nodemailer": "^1.10.0",

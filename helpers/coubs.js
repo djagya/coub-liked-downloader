@@ -123,5 +123,35 @@ module.exports = {
 
     getDestDoneFilename: function (coub, version) {
         return `${this.FOLDER_DONE}/${coub.id}/${version}.mp4`;
+    },
+
+    getTotalSize: function () {
+        // todo
+        //coubsHelper.getCoubs(req.user.channel_id, req.user.access_token, function (err, data) {
+        //    // todo exctract
+        //    var size = 0;
+        //
+        //    _.each(data, function (coub) {
+        //        // todo exctract
+        //        try {
+        //            size += fs.statSync(coubsHelper.getDestDoneFilename(coub, quality)).size;
+        //        } catch (err) {
+        //            console.log(err);
+        //        }
+        //
+        //        var path = __dirname + '/../' + coubsHelper.getDestDoneFilename(coub, quality);
+        //
+        //        if (fs.existsSync(path)) {
+        //            archive.file(path, {name: coub.title + '.mp4'});
+        //        }
+        //    });
+        //
+        //    res.set({
+        //        'Content-Type': 'application/zip',
+        //        'Content-Length': size
+        //    });
+        //
+        //    archive.finalize();
+        //});
     }
 };
