@@ -39,7 +39,7 @@ console.log('Opening browser');
 emitter.once('success_redirect', () => {
     let creds = memoryCache().get('user');
     //let worker = new CoubWorker(creds.channel_id, creds.access_token);
-    let worker = new CoubWorker(620873, 'caee56754c194842a881397ad8388a943721c4472fb691d5a3d470d89c62512f');
+    let worker = new CoubWorker(620873, 'caee56754c194842a881397ad8388a943721c4472fb691d5a3d470d89c62512f', quality);
 
     // Close the webserver
     server.close();
