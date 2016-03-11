@@ -7,9 +7,9 @@ const program = require('commander');
 const opener = require('opener');
 const path = require('path');
 const pkg = require(path.join(__dirname, 'package.json'));
-const emitter = require('./emitters/emitter');
-const memoryCache = require('./helpers/memory-cache');
-const CoubWorker = require('./helpers/coub-worker');
+const emitter = require('./lib/emitter');
+const memoryCache = require('./lib/memory-cache');
+const CoubWorker = require('./lib/coub-worker');
 
 // vars
 var savePath = './data';

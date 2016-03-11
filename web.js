@@ -5,8 +5,8 @@
  */
 const express = require('express');
 const passport = require('./lib/coub-strategy');
-const memoryCache = require('./helpers/memory-cache');
-const emitter = require('./emitters/emitter');
+const memoryCache = require('./lib/memory-cache');
+const emitter = require('./lib/emitter');
 
 // start webserver
 const app = express();
