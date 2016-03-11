@@ -34,19 +34,26 @@ const server = require('./bin/www');
 // spawn the browser with coub auth url
 console.log('Opening browser');
 // todo
-opener('http://localhost:7654/auth');
+//opener('http://localhost:7654/auth');
 
 emitter.once('success_redirect', () => {
     let creds = memoryCache().get('user');
-    let worker = new CoubWorker(creds.channel_id, creds.access_token);
+    //let worker = new CoubWorker(creds.channel_id, creds.access_token);
+    let worker = new CoubWorker(620873, 'caee56754c194842a881397ad8388a943721c4472fb691d5a3d470d89c62512f');
 
     // Close the webserver
     server.close();
 
-    worker.start(() => {
-        console.log('work is done');
+    worker.start((err) => {
+        if (err) {
+            console.log(`work is failed, error: ${err}`);
+        } else {
+            console.log('work is done');
+        }
     });
 });
+
+emitter.emit('success_redirect');
 
 
 // todo:
